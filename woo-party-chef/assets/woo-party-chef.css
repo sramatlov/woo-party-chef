@@ -1006,6 +1006,19 @@
 
 /* ===== Focus, motion, breakpoints ===== */
 
+/* Elementor's global link hover rule must not replace button typography. */
+.woopc .woopc__cta:hover,
+.woopc .woopc__cta:focus,
+.woopc .woopc__col-cta:hover,
+.woopc .woopc__col-cta:focus,
+.woopc .woopc__card-link:hover,
+.woopc .woopc__card-link:focus,
+.woopc .woopc__ext-link:hover,
+.woopc .woopc__ext-link:focus {
+	font-family: var(--woopc-head);
+	font-weight: 500;
+}
+
 .woopc .woopc__color:focus-visible,
 .woopc .woopc__step-btn:focus-visible,
 .woopc .woopc__pick:focus-visible,

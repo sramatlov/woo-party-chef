@@ -1,7 +1,7 @@
 === Woo Party Chef ===
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 
 Chef's Dinner Party set planner and comparison for bourgini.com, with live WooCommerce prices.
@@ -73,6 +73,10 @@ script is excluded from Delay JS, while remaining deferred. Head CSS is
 discovered from normal page content and Elementor data on the first visit.
 
 == Changelog ==
+
+= 1.1.2 =
+* Keep purchase-button and extension-link typography unchanged on hover and keyboard focus when Elementor applies global link fonts.
+* Add desktop and mobile browser checks against conflicting Elementor hover/focus typography.
 
 = 1.1.1 =
 * Fix the invisible comparison in centred Elementor shortcode widgets: preserve the intrinsic inline width required by container queries.

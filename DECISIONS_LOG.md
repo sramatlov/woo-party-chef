@@ -1,5 +1,18 @@
 # Decisions Log - Woo Party Chef
 
+## v1.1.2 (1 October 2026)
+
+The staging Elementor kit's `.elementor-kit-13 a:hover` changes the font family
+to RobotoFlex and the weight to 300. Its specificity beats the purchase links'
+normal typography, while the existing hover rules only protected colors and
+motion. Explicitly keep the existing heading font and weight 500 in the scoped
+hover/focus rules for the planner CTA, comparison CTAs, mobile purchase links
+and extension link. This preserves the existing color and movement effects.
+
+The browser suite reproduces the conflict with an Elementor kit rule and checks
+font family, weight, size and line height before/after hover and focus at desktop
+and mobile widths. The first new assertion failed against v1.1.1.
+
 ## v1.1.1 (1 October 2026)
 
 The staging campaign's centred Elementor column collapsed its shortcode widget
