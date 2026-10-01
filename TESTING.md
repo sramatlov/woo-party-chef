@@ -1,5 +1,45 @@
 # Testing - Woo Party Chef
 
+## v1.1.1: centred Elementor regression (1 October 2026)
+
+The campaign page rendered valid products and assets in v1.1.0, but its centred
+Elementor shortcode widget measured zero pixels wide. A fixture with the same
+centred flex-column and nested shortcode wrappers failed before the CSS fix.
+After supplying an intrinsic inline size, all 48 browser assertions pass,
+including 12 new checks for centred containers at 1140px, 600px and 343px:
+width before JavaScript, responsive layout, first interaction and no overflow.
+The 60 PHP assertions, 224 calculation parity states and 16 browser-config
+validations also pass locally with PHP 8.3, Node 24 and installed Chrome.
+
+Installed v1.1.1 on the Kinsta staging campaign and purged only that URL through
+WP Rocket. The real component measures 1140px on desktop and 320px at a 375px
+viewport; desktop shows the comparison table and mobile shows cards without
+horizontal overflow. Person-count and finish changes update advice, prices and
+photos. This check used the existing authenticated WordPress browser session.
+
+### Staging installation record — 1 October 2026
+
+Target: [Elk diner een feest! on Kinsta staging](https://env-bourginicom-premium.kinsta.cloud/elk-diner-een-feest/).
+
+1. Opened the staging WordPress administration through the page's toolbar in
+   the existing signed-in browser session.
+2. Used **Plugins > Add Plugin > Upload Plugin** to select
+   `woo-party-chef-v1.1.1-install.zip`, built with `tools/build-install.ps1`.
+   All seven packaged runtime files matched the repository files by SHA-256.
+3. WordPress showed Woo Party Chef 1.1.0 as installed and 1.1.1 as uploaded.
+   Chose **Replace current with uploaded**; WordPress confirmed
+   **Plugin updated successfully**.
+4. Opened the campaign and checked that the stylesheet URL carried
+   `ver=1.1.1` and the shortcode had a nonzero width. Tested the person stepper
+   and finish selector on desktop and mobile, including changing photos,
+   prices and advice. Reset the temporary mobile viewport afterwards.
+5. Used WP Rocket's **Purge this URL** for this campaign only, then confirmed
+   the returned page still loaded version 1.1.1 at 1140px wide on desktop.
+
+This record covers the staging installation. The authenticated browser check
+does not establish the result of an anonymous request through the full hosting
+cache chain. The remaining cache/scheduled-sale checks below still apply.
+
 ## v1.1.0: reproducible checks (1 October 2026)
 
 Run `npm test` with PHP and Node on PATH. The checked-in harness uses strict

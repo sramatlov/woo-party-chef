@@ -4,7 +4,7 @@ WordPress plugin for bourgini.com that renders the **Chef's Dinner Party (CDP) v
 
 Built from the Claude Design handoff "CDP Vergelijker" (October 2026). Deliberately a separate plugin, not part of [Woo Card Chef](https://github.com/sramatlov/woo-card-chef); it only borrows Woo Card Chef's PFAS-vrij badge (styling, leaf icon and ACF field).
 
-- **Current version:** 1.1.0
+- **Current version:** 1.1.1
 - **Requires:** WordPress 6.0+, PHP 7.4+, WooCommerce 6.0+
 - **Target stack:** Hello Elementor, Elementor Pro, WooCommerce, WP Rocket (Remove Unused CSS, Delay JS), Imagify, Kinsta
 
@@ -30,7 +30,7 @@ Extra lines: 2-3 persons explain that the smallest set is for 4; 7 persons offer
 
 ## Installation
 
-1. Upload `woo-party-chef-v1.1.0-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
+1. Upload `woo-party-chef-v1.1.1-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
 2. Activate. WooCommerce must be active.
 3. Add an Elementor **Shortcode** widget to the campaign container:
 
@@ -39,6 +39,14 @@ Extra lines: 2-3 persons explain that the smallest set is for 4; 7 persons offer
 ```
 
 The Elementor container provides the section title, intro, width, padding and background.
+
+To update an existing installation, upload the new ZIP through the same plugin
+upload screen and choose **Replace current with uploaded** when WordPress shows
+the installed and uploaded versions. After the update succeeds, use WP Rocket's
+**Purge this URL** on the campaign page and verify both desktop and mobile.
+Version 1.1.1 fixes a zero-width shortcode widget in centred Elementor containers;
+the shortcode remains `[woo_party_chef]`. See [TESTING.md](TESTING.md) for the
+recorded staging installation and checks.
 
 After updating from 1.0.0, clear the campaign page cache once so the new markup
 and versioned assets replace the existing cached page. For a planner above the
