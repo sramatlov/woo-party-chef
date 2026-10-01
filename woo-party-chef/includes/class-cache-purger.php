@@ -85,7 +85,21 @@ class WOOPC_Cache_Purger {
 	 * @return int[]
 	 */
 	public static function get_pages(): array {
-		return array_values( array_filter( array_map( 'absint', (array) get_option( self::PAGES_OPTION, array() ) ) ) );
+		$stored = get_option( self::PAGES_OPTION, array() );
+		if ( ! is_array( $stored ) ) {
+			return array();
+		}
+		return self::sanitize_page_ids( $stored );
+	}
+
+	/** Ignore corrupt values and deduplicate page IDs before any cache operation. */
+	private static function sanitize_page_ids( array $values ): array {
+		return array_values( array_unique( array_filter( array_map(
+			static function ( $id ): int {
+				return is_scalar( $id ) ? absint( $id ) : 0;
+			},
+			$values
+		) ) ) );
 	}
 
 	/**
@@ -154,13 +168,18 @@ class WOOPC_Cache_Purger {
 		 *
 		 * @param int[] $pages Page IDs.
 		 */
-		$pages = array_map( 'absint', (array) apply_filters( 'woopc_cdp_purge_post_ids', $pages ) );
+		$filtered = apply_filters( 'woopc_cdp_purge_post_ids', $pages );
+		$pages    = is_array( $filtered ) ? self::sanitize_page_ids( $filtered ) : array();
+		$rocket_kinsta = function_exists( 'rocket_clean_post' ) && self::rocket_handles_kinsta();
 
 		foreach ( $pages as $page_id ) {
 			if ( function_exists( 'rocket_clean_post' ) ) {
 				rocket_clean_post( $page_id );
 			}
 			clean_post_cache( $page_id );
+			if ( ! $rocket_kinsta ) {
+				self::purge_kinsta_page( $page_id );
+			}
 		}
 
 		/**
@@ -169,5 +188,35 @@ class WOOPC_Cache_Purger {
 		 * @param int[] $pages Page IDs.
 		 */
 		do_action( 'woopc_cdp_pages_purged', $pages );
+	}
+
+	/** WP Rocket's native Kinsta bridge already purges each cleaned post. */
+	private static function rocket_handles_kinsta(): bool {
+		global $wp_filter;
+		$hook = $wp_filter['after_rocket_clean_post'] ?? null;
+		if ( ! $hook instanceof \WP_Hook ) {
+			return false;
+		}
+		foreach ( $hook->callbacks as $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				$handler = $callback['function'] ?? null;
+				if ( is_array( $handler ) && isset( $handler[0], $handler[1] ) && $handler[0] instanceof \WP_Rocket\ThirdParty\Hostings\Kinsta && 'clean_kinsta_post_cache' === $handler[1] ) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/** Targeted Kinsta MU-plugin fallback; never flushes the entire site. */
+	private static function purge_kinsta_page( int $page_id ): void {
+		global $kinsta_cache;
+		if ( ! is_object( $kinsta_cache ) || ! isset( $kinsta_cache->kinsta_cache_purge ) ) {
+			return;
+		}
+		$purger = $kinsta_cache->kinsta_cache_purge;
+		if ( is_object( $purger ) && is_callable( array( $purger, 'initiate_purge' ) ) ) {
+			$purger->initiate_purge( $page_id, 'post' );
+		}
 	}
 }

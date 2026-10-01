@@ -2,8 +2,8 @@
 /**
  * [woo_party_chef] shortcode: Chef's Dinner Party planner and comparison.
  *
- * Renders the complete default state server-side (WP Rocket delays JS until
- * the first interaction). State is styled through data/ARIA attributes, never
+ * Renders the complete default state server-side. The small planner script is
+ * deferred and excluded from WP Rocket Delay JS. State is styled through data/ARIA attributes, never
  * through JS-added classes, so WP Rocket's Remove Unused CSS keeps the rules.
  *
  * Usage:
@@ -21,6 +21,7 @@
  *   anchor         HTML id                  Default: kies-jouw-chefs-dinner-party
  *   image_grey     attachment ID            Fallback for Grey products without a featured image
  *   image_wit      attachment ID            Fallback for Wit products without a featured image
+ *   image_loading  auto|eager|lazy          WordPress default; eager for an above-fold planner
  *
  * The planner image shows the featured image of the recommended product.
  *
@@ -38,6 +39,9 @@ class WOOPC_Shortcode {
 
 	const TAG    = 'woo_party_chef';
 	const HANDLE = 'woo-party-chef';
+
+	/** Anchors already used by this shortcode in the current request. */
+	private static $anchors = array();
 
 	/**
 	 * Fixed per-column copy.
@@ -70,6 +74,7 @@ class WOOPC_Shortcode {
 	public static function init(): void {
 		add_shortcode( self::TAG, array( __CLASS__, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
+		add_filter( 'script_loader_tag', array( __CLASS__, 'script_tag' ), 10, 2 );
 
 		// WP Rocket Remove Unused CSS: keep this small stylesheet intact.
 		add_filter( 'rocket_rucss_external_exclusions', array( __CLASS__, 'rucss_exclude_file' ) );
@@ -77,7 +82,7 @@ class WOOPC_Shortcode {
 	}
 
 	/**
-	 * Registers assets; enqueues CSS in the head on remembered pages.
+	 * Registers assets; discovers shortcodes before the first page render.
 	 */
 	public static function register_assets(): void {
 		wp_register_style( self::HANDLE, WOOPC_URL . 'assets/woo-party-chef.css', array(), WOOPC_VERSION );
@@ -86,16 +91,36 @@ class WOOPC_Shortcode {
 			WOOPC_URL . 'assets/woo-party-chef.js',
 			array(),
 			WOOPC_VERSION,
-			array(
-				'in_footer' => true,
-				'strategy'  => 'defer',
-			)
+			true
 		);
+		wp_script_add_data( self::HANDLE, 'strategy', 'defer' );
 
 		// Known comparison page: load CSS in <head> to avoid a late-style flash.
-		if ( is_singular() && in_array( (int) get_queried_object_id(), WOOPC_Cache_Purger::get_pages(), true ) ) {
+		if ( is_singular() && ( in_array( (int) get_queried_object_id(), WOOPC_Cache_Purger::get_pages(), true ) || self::page_has_shortcode( (int) get_queried_object_id() ) ) ) {
 			wp_enqueue_style( self::HANDLE );
 		}
+	}
+
+	/** Finds both normal content and Elementor shortcode widgets before wp_head. */
+	private static function page_has_shortcode( int $post_id ): bool {
+		$post = get_post( $post_id );
+		if ( $post instanceof \WP_Post && has_shortcode( (string) $post->post_content, self::TAG ) ) {
+			return true;
+		}
+		$data = get_post_meta( $post_id, '_elementor_data', true );
+		return is_string( $data ) && has_shortcode( $data, self::TAG );
+	}
+
+	/** Keep only our small interactive script out of WP Rocket Delay JS. */
+	public static function script_tag( string $tag, string $handle ): string {
+		if ( self::HANDLE !== $handle ) {
+			return $tag;
+		}
+		$attributes = ' data-nowprocket';
+		if ( ! preg_match( '/\sdefer(?:\s|=|>)/i', $tag ) ) {
+			$attributes .= ' defer';
+		}
+		return (string) preg_replace( '/<script\b/i', '<script' . $attributes, $tag, 1 );
 	}
 
 	/**
@@ -129,22 +154,26 @@ class WOOPC_Shortcode {
 	 * @return string
 	 */
 	public static function render( $atts ): string {
-		$atts = shortcode_atts(
-			array(
-				'default_color' => 'grey',
-				'persons'       => 4,
-				'show_planner'  => 'yes',
-				'show_prices'   => 'yes',
-				'show_sale'     => 'yes',
-				'discount'      => 'amount',
-				'standalone'    => 'no',
-				'anchor'        => 'kies-jouw-chefs-dinner-party',
-				'image_grey'    => 0,
-				'image_wit'     => 0,
-			),
-			(array) $atts,
-			self::TAG
+		$defaults = array(
+			'default_color' => 'grey',
+			'persons'       => 4,
+			'show_planner'  => 'yes',
+			'show_prices'   => 'yes',
+			'show_sale'     => 'yes',
+			'discount'      => 'amount',
+			'standalone'    => 'no',
+			'anchor'        => 'kies-jouw-chefs-dinner-party',
+			'image_grey'    => 0,
+			'image_wit'     => 0,
+			'image_loading' => 'auto',
 		);
+		$filtered = shortcode_atts( $defaults, is_array( $atts ) ? $atts : array(), self::TAG );
+		$atts     = is_array( $filtered ) ? array_replace( $defaults, array_intersect_key( $filtered, $defaults ) ) : $defaults;
+		// Shortcode filters/imports may supply arrays or objects instead of strings.
+		foreach ( $atts as $key => $value ) {
+			$atts[ $key ] = is_scalar( $value ) ? (string) $value : '';
+		}
+		self::maybe_remember_page();
 
 		$colors = WOOPC_Products::get_colors_data(
 			array(
@@ -162,9 +191,10 @@ class WOOPC_Shortcode {
 		}
 
 		$settings = array(
-			'show_prices'  => self::is_yes( $atts['show_prices'] ),
-			'show_sale'    => self::is_yes( $atts['show_sale'] ),
-			'discount_pct' => 'percentage' === sanitize_key( $atts['discount'] ),
+			'show_prices'   => self::is_yes( $atts['show_prices'] ),
+			'show_sale'     => self::is_yes( $atts['show_sale'] ),
+			'discount_pct'  => 'percentage' === sanitize_key( $atts['discount'] ),
+			'image_loading' => in_array( $atts['image_loading'], array( 'auto', 'eager', 'lazy' ), true ) ? $atts['image_loading'] : 'auto',
 		);
 		$planner  = self::is_yes( $atts['show_planner'] );
 
@@ -176,15 +206,20 @@ class WOOPC_Shortcode {
 		$state   = WOOPC_Products::compute_state( $colors[ $color_key ], $persons, $settings );
 
 		self::enqueue();
-		self::maybe_remember_page();
+		$instance_id = wp_unique_id( 'woopc-instance-' );
+		$anchor      = self::unique_anchor( $atts['anchor'] );
 
 		$config = array(
 			'colors'      => array_map(
-				static function ( array $color ): array {
+				static function ( array $color ) use ( $settings ): array {
+					$items = array();
+					foreach ( $color['items'] as $key => $item ) {
+						$items[ $key ] = array_intersect_key( $item, array_flip( $settings['show_prices'] ? array( 'price', 'regular', 'url', 'image', 'pfas' ) : array( 'url', 'image', 'pfas' ) ) );
+					}
 					return array(
 						'label' => $color['label'],
 						'name'  => $color['name'],
-						'items' => $color['items'],
+						'items' => $items,
 					);
 				},
 				$colors
@@ -197,19 +232,19 @@ class WOOPC_Shortcode {
 
 		ob_start();
 
-		// Elementor renders widgets via AJAX while editing; enqueued styles
-		// are not printed there, so link the stylesheet directly.
-		if ( wp_doing_ajax() || isset( $_GET['elementor-preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only check.
-			echo '<link rel="stylesheet" href="' . esc_url( WOOPC_URL . 'assets/woo-party-chef.css?ver=' . WOOPC_VERSION ) . '">'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
+		// Nested templates missed by head discovery still get CSS before the component.
+		if ( ! wp_style_is( self::HANDLE, 'done' ) && ( did_action( 'wp_head' ) || wp_doing_ajax() || isset( $_GET['elementor-preview'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only check.
+			wp_print_styles( array( self::HANDLE ) );
 		}
 		?>
-		<section class="woopc" id="<?php echo esc_attr( sanitize_html_class( $atts['anchor'] ) ); ?>" data-standalone="<?php echo self::is_yes( $atts['standalone'] ) ? 'yes' : 'no'; ?>" data-color="<?php echo esc_attr( $color_key ); ?>" data-persons="<?php echo esc_attr( (string) $state['n'] ); ?>" data-config="<?php echo esc_attr( (string) wp_json_encode( $config ) ); ?>">
+		<section class="woopc" id="<?php echo esc_attr( $anchor ); ?>" data-standalone="<?php echo self::is_yes( $atts['standalone'] ) ? 'yes' : 'no'; ?>" data-color="<?php echo esc_attr( $color_key ); ?>" data-persons="<?php echo esc_attr( (string) $state['n'] ); ?>" data-config="<?php echo esc_attr( (string) wp_json_encode( $config ) ); ?>">
+			<div class="woopc__sr-only" role="status" aria-live="polite" aria-atomic="true" data-ref="status"></div>
 			<div class="woopc__inner">
 				<?php
 				if ( $planner ) {
-					self::render_planner( $colors, $color_key, $state, $settings );
+					self::render_planner( $colors, $color_key, $state, $settings, $instance_id );
 				}
-				self::render_compare( $colors, $color_key, $state, $settings );
+				self::render_compare( $colors, $color_key, $state, $settings, $instance_id );
 				self::render_features();
 				?>
 			</div>
@@ -226,20 +261,20 @@ class WOOPC_Shortcode {
 	 * @param array  $state     Computed state.
 	 * @param array  $settings  Display settings.
 	 */
-	private static function render_planner( array $colors, string $color_key, array $state, array $settings ): void {
+	private static function render_planner( array $colors, string $color_key, array $state, array $settings, string $instance_id ): void {
 		$shown = $colors[ $color_key ]['items'][ $state['image'] ];
 		?>
 		<div class="woopc__planner">
 			<div class="woopc__media">
-				<?php self::render_product_images( $colors, (int) $shown['image'] ); ?>
+				<?php self::render_product_images( $colors, (int) $shown['image'], $settings['image_loading'] ); ?>
 				<span class="woopc__pfas" data-ref="pfas"<?php echo $shown['pfas'] ? '' : ' hidden'; ?>>
 					<svg class="woopc__pfas-icon" viewBox="0 0 2.996769 3.3520503" aria-hidden="true" focusable="false"><path fill="currentColor" d="<?php echo esc_attr( self::LEAF_PATH ); ?>"/></svg>PFAS-vrij
 				</span>
 			</div>
 			<div class="woopc__controls">
 				<div class="woopc__step">
-					<div class="woopc__step-label" id="woopc-step-color">1. Uitvoering</div>
-					<div class="woopc__colors" role="group" aria-labelledby="woopc-step-color">
+					<div class="woopc__step-label" id="<?php echo esc_attr( $instance_id . '-color' ); ?>">1. Uitvoering</div>
+					<div class="woopc__colors" role="group" aria-labelledby="<?php echo esc_attr( $instance_id . '-color' ); ?>">
 						<?php self::render_color_buttons( $colors, $color_key, false ); ?>
 					</div>
 				</div>
@@ -247,7 +282,7 @@ class WOOPC_Shortcode {
 					<div class="woopc__step-label">2. Met hoeveel personen eet je?</div>
 					<div class="woopc__stepper">
 						<button type="button" class="woopc__step-btn" data-step="-1" aria-label="Minder personen"<?php disabled( $state['n'] <= 1 ); ?>>−</button>
-						<div class="woopc__count" aria-live="polite">
+						<div class="woopc__count">
 							<span class="woopc__count-num" data-ref="n"><?php echo esc_html( (string) $state['n'] ); ?></span>
 							<span class="woopc__count-unit">personen</span>
 						</div>
@@ -298,14 +333,13 @@ class WOOPC_Shortcode {
 	/**
 	 * Renders each distinct product image once; only the active one is visible.
 	 *
-	 * Hidden images are not downloaded by the browser (lazy + display:none),
-	 * so the extra cost is markup only. JS toggles [hidden] by attachment ID,
-	 * which keeps Imagify <picture> markup and WP Rocket lazyload intact.
+	 * Hide wrappers so Imagify's picture elements are hidden together with images.
+	 * WordPress chooses active-image priority in auto mode; alternates stay lazy.
 	 *
 	 * @param array $colors    Colors data.
 	 * @param int   $active_id Attachment ID to show.
 	 */
-	private static function render_product_images( array $colors, int $active_id ): void {
+	private static function render_product_images( array $colors, int $active_id, string $loading ): void {
 		$images = array();
 		foreach ( $colors as $color ) {
 			foreach ( $color['items'] as $key => $item ) {
@@ -318,20 +352,26 @@ class WOOPC_Shortcode {
 			}
 		}
 
+		// Let WordPress evaluate the visible image before the hidden alternatives.
+		if ( isset( $images[ $active_id ] ) ) {
+			$images = array( $active_id => $images[ $active_id ] ) + $images;
+		}
 		foreach ( $images as $image_id => $alt ) {
 			$attr = array(
 				'class'         => 'woopc__img',
 				'alt'           => $alt,
 				'sizes'         => '(max-width: 800px) 62vw, 520px',
-				'data-image-id' => (string) $image_id,
-				'loading'       => 'lazy',
 			);
-			// wp_get_attachment_image() prints every key, so only add
-			// "hidden" when the image must actually be hidden.
-			if ( $image_id !== $active_id ) {
-				$attr['hidden'] = 'hidden';
+			if ( $image_id !== $active_id || 'lazy' === $loading ) {
+				$attr['loading']       = 'lazy';
+				$attr['fetchpriority'] = 'low';
+			} elseif ( 'eager' === $loading ) {
+				$attr['loading']       = 'eager';
+				$attr['fetchpriority'] = 'high';
 			}
+			echo '<div class="woopc__image" data-image-id="' . esc_attr( (string) $image_id ) . '"' . ( $image_id !== $active_id ? ' hidden' : '' ) . '>';
 			echo wp_get_attachment_image( $image_id, 'woocommerce_single', false, $attr );
+			echo '</div>';
 		}
 	}
 
@@ -343,52 +383,52 @@ class WOOPC_Shortcode {
 	 * @param array  $state     Computed state.
 	 * @param array  $settings  Display settings.
 	 */
-	private static function render_compare( array $colors, string $color_key, array $state, array $settings ): void {
+	private static function render_compare( array $colors, string $color_key, array $state, array $settings, string $instance_id ): void {
 		$show_prices = $settings['show_prices'];
 		?>
 		<div class="woopc__compare">
 			<div class="woopc__compare-head">
-				<h3 class="woopc__compare-title">Alle sets naast elkaar <span class="woopc__compare-color" data-ref="color-label">· <?php echo esc_html( $colors[ $color_key ]['label'] ); ?></span></h3>
+				<h3 class="woopc__compare-title" id="<?php echo esc_attr( $instance_id . '-compare' ); ?>">Alle sets naast elkaar <span class="woopc__compare-color" data-ref="color-label">· <?php echo esc_html( $colors[ $color_key ]['label'] ); ?></span></h3>
 				<div class="woopc__colors woopc__colors--small" role="group" aria-label="Uitvoering">
 					<?php self::render_color_buttons( $colors, $color_key, true ); ?>
 				</div>
 			</div>
 
 			<div class="woopc__table-wrap">
-				<div class="woopc__table">
-					<div class="woopc__labels" aria-hidden="true">
-						<div class="woopc__label woopc__label--head"></div>
-						<div class="woopc__label woopc__label--ideal">Ideaal voor</div>
-						<div class="woopc__label woopc__label--stations">Kookstations</div>
-						<div class="woopc__label woopc__label--watt">Vermogen</div>
+				<div class="woopc__table" role="table" aria-labelledby="<?php echo esc_attr( $instance_id . '-compare' ); ?>">
+					<div class="woopc__labels" role="row">
+						<div class="woopc__label woopc__label--head" role="columnheader"><span class="woopc__sr-only">Set</span></div>
+						<div class="woopc__label woopc__label--ideal" role="columnheader">Ideaal voor</div>
+						<div class="woopc__label woopc__label--stations" role="columnheader">Kookstations</div>
+						<div class="woopc__label woopc__label--watt" role="columnheader">Vermogen</div>
 						<?php if ( $show_prices ) : ?>
-							<div class="woopc__label woopc__label--price">Prijs</div>
+							<div class="woopc__label woopc__label--price" role="columnheader">Prijs</div>
 						<?php endif; ?>
-						<div class="woopc__label woopc__label--cta"></div>
+						<div class="woopc__label woopc__label--cta" role="columnheader"><span class="woopc__sr-only">Product bekijken</span></div>
 					</div>
 					<?php foreach ( self::COLUMNS as $key => $column ) : ?>
 						<?php $col = $state['cols'][ $key ]; ?>
-						<div class="woopc__col" data-col="<?php echo esc_attr( $key ); ?>" data-kind="<?php echo 'ext' === $key ? 'ext' : 'set'; ?>" data-active="<?php echo $col['active'] ? 'true' : 'false'; ?>">
-							<div class="woopc__cell woopc__cell--head">
+						<div class="woopc__col" role="row" data-col="<?php echo esc_attr( $key ); ?>" data-kind="<?php echo 'ext' === $key ? 'ext' : 'set'; ?>" data-active="<?php echo $col['active'] ? 'true' : 'false'; ?>">
+							<div class="woopc__cell woopc__cell--head" role="rowheader">
 								<span class="woopc__chosen">Jouw keuze</span>
 								<?php if ( $show_prices ) : ?>
 									<span class="woopc__badge" data-ref="badge"<?php echo $col['sale'] ? '' : ' hidden'; ?>><?php echo esc_html( $col['badge'] ); ?></span>
 								<?php endif; ?>
-								<button type="button" class="woopc__pick" data-pick="<?php echo esc_attr( $key ); ?>" aria-label="<?php echo esc_attr( self::pick_label( $key ) ); ?>">
+								<button type="button" class="woopc__pick" data-pick="<?php echo esc_attr( $key ); ?>" aria-pressed="<?php echo $col['active'] ? 'true' : 'false'; ?>" aria-label="<?php echo esc_attr( self::pick_label( $key ) ); ?>">
 									<span class="woopc__big"><?php echo esc_html( $column['big'] ); ?></span>
 									<span class="woopc__unit"><?php echo esc_html( $column['unit'] ); ?></span>
 								</button>
 							</div>
-							<div class="woopc__cell woopc__cell--ideal"><?php echo esc_html( $column['ideal'] ); ?></div>
-							<div class="woopc__cell woopc__cell--stations"><?php echo esc_html( self::stations_label( $column['stations'] ) ); ?></div>
-							<div class="woopc__cell woopc__cell--watt"><?php echo esc_html( WOOPC_Products::format_watt( $column['stations'] * WOOPC_Products::WATT_PER_STATION ) ); ?></div>
+							<div class="woopc__cell woopc__cell--ideal" role="cell"><?php echo esc_html( $column['ideal'] ); ?></div>
+							<div class="woopc__cell woopc__cell--stations" role="cell"><?php echo esc_html( self::stations_label( $column['stations'] ) ); ?></div>
+							<div class="woopc__cell woopc__cell--watt" role="cell"><?php echo esc_html( WOOPC_Products::format_watt( $column['stations'] * WOOPC_Products::WATT_PER_STATION ) ); ?></div>
 							<?php if ( $show_prices ) : ?>
-								<div class="woopc__cell woopc__cell--price">
+								<div class="woopc__cell woopc__cell--price" role="cell">
 									<s class="woopc__col-was" data-ref="was"<?php echo $col['sale'] ? '' : ' hidden'; ?>><?php echo esc_html( $col['was'] ); ?></s>
 									<span class="woopc__col-price" data-ref="price" data-sale="<?php echo $col['sale'] ? 'true' : 'false'; ?>"><?php echo esc_html( $col['price'] ); ?></span>
 								</div>
 							<?php endif; ?>
-							<div class="woopc__cell woopc__cell--cta">
+							<div class="woopc__cell woopc__cell--cta" role="cell">
 								<a class="woopc__col-cta" data-ref="url" href="<?php echo esc_url( $col['url'] ); ?>">Bekijk</a>
 							</div>
 						</div>
@@ -400,7 +440,7 @@ class WOOPC_Shortcode {
 				<?php foreach ( self::COLUMNS as $key => $column ) : ?>
 					<?php $col = $state['cols'][ $key ]; ?>
 					<div class="woopc__card" data-col="<?php echo esc_attr( $key ); ?>" data-kind="<?php echo 'ext' === $key ? 'ext' : 'set'; ?>" data-active="<?php echo $col['active'] ? 'true' : 'false'; ?>">
-						<button type="button" class="woopc__pick woopc__card-num" data-pick="<?php echo esc_attr( $key ); ?>" aria-label="<?php echo esc_attr( self::pick_label( $key ) ); ?>">
+						<button type="button" class="woopc__pick woopc__card-num" data-pick="<?php echo esc_attr( $key ); ?>" aria-pressed="<?php echo $col['active'] ? 'true' : 'false'; ?>" aria-label="<?php echo esc_attr( self::pick_label( $key ) ); ?>">
 							<span class="woopc__card-big"><?php echo esc_html( $column['big'] ); ?></span>
 							<span class="woopc__card-unit"><?php echo esc_html( $column['unit'] ); ?></span>
 						</button>
@@ -519,5 +559,17 @@ class WOOPC_Shortcode {
 	 */
 	private static function is_yes( $value ): bool {
 		return in_array( strtolower( (string) $value ), array( 'yes', '1', 'true', 'ja', 'on' ), true );
+	}
+
+	/** Preserve the first public anchor and suffix duplicates deterministically. */
+	private static function unique_anchor( string $requested ): string {
+		$base   = sanitize_html_class( $requested ) ?: 'kies-jouw-chefs-dinner-party';
+		$anchor = $base;
+		$suffix = 2;
+		while ( isset( self::$anchors[ $anchor ] ) ) {
+			$anchor = $base . '-' . $suffix++;
+		}
+		self::$anchors[ $anchor ] = true;
+		return $anchor;
 	}
 }

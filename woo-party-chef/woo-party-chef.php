@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Woo Party Chef
  * Description:       Chef's Dinner Party set planner and comparison with live WooCommerce prices. Shortcode: [woo_party_chef].
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            S15 Webdesign
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WOOPC_VERSION', '1.0.0' );
+define( 'WOOPC_VERSION', '1.1.0' );
 define( 'WOOPC_FILE', __FILE__ );
 define( 'WOOPC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WOOPC_URL', plugin_dir_url( __FILE__ ) );

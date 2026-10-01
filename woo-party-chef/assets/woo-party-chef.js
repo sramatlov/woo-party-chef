@@ -15,6 +15,47 @@
 	var SIZES = [ 4, 5, 6, 8 ];
 	var COLS = [ '4', '5', '6', '8', 'ext' ];
 	var WATT = 250;
+	var initialized = new WeakSet();
+
+	function isObject( value ) {
+		return value !== null && typeof value === 'object' && ! Array.isArray( value );
+	}
+
+	function validUrl( value ) {
+		if ( typeof value !== 'string' || value === '' ) {
+			return false;
+		}
+		try {
+			var url = new URL( value, document.baseURI );
+			return url.protocol === 'https:' || url.protocol === 'http:';
+		} catch ( e ) {
+			return false;
+		}
+	}
+
+	/** Malformed imports must not break other shortcode instances. */
+	function validConfig( cfg ) {
+		// max comes from WOOPC_Products::MAX_PERSONS; never hardcode it here.
+		if ( ! isObject( cfg ) || ! isObject( cfg.colors ) || ! Number.isSafeInteger( cfg.max ) || cfg.max < 1 ||
+			typeof cfg.showPrices !== 'boolean' || typeof cfg.showSale !== 'boolean' || typeof cfg.discountPct !== 'boolean' ) {
+			return false;
+		}
+		var keys = Object.keys( cfg.colors );
+		return keys.length > 0 && keys.every( function ( key ) {
+			var color = cfg.colors[ key ];
+			return /^[a-z0-9_-]+$/.test( key ) && [ '__proto__', 'constructor', 'prototype' ].indexOf( key ) === -1 &&
+				isObject( color ) && typeof color.label === 'string' && color.label !== '' &&
+				typeof color.name === 'string' && color.name !== '' && isObject( color.items ) &&
+				COLS.every( function ( col ) {
+					var item = color.items[ col ];
+					return isObject( item ) && validUrl( item.url ) && Number.isSafeInteger( item.image ) && item.image >= 0 &&
+						typeof item.pfas === 'boolean' && ( ! cfg.showPrices ||
+							( typeof item.price === 'number' && Number.isFinite( item.price ) && item.price > 0 &&
+								typeof item.regular === 'number' && Number.isFinite( item.regular ) && item.regular >= item.price &&
+								Number.isFinite( item.regular * cfg.max ) ) );
+				} );
+		} );
+	}
 
 	function formatEur( value ) {
 		var fixed = Math.max( 0, value ).toFixed( 2 ).split( '.' );
@@ -56,8 +97,8 @@
 		}
 
 		var spare = set + ext - n;
-		var total = ( solo ? 0 : items[ set ].price ) + ext * items.ext.price;
-		var totalWas = ( solo ? 0 : items[ set ].regular ) + ext * items.ext.regular;
+		var total = cfg.showPrices ? ( solo ? 0 : items[ set ].price ) + ext * items.ext.price : 0;
+		var totalWas = cfg.showPrices ? ( solo ? 0 : items[ set ].regular ) + ext * items.ext.regular : 0;
 		var stations = set + ext;
 		var title, text;
 
@@ -94,15 +135,15 @@
 		var cols = {};
 		COLS.forEach( function ( key ) {
 			var item = items[ key ];
-			var diff = item.regular - item.price;
+			var diff = cfg.showPrices ? item.regular - item.price : 0;
 			cols[ key ] = {
 				active: key === 'ext' ? ext > 0 : Number( key ) === set,
-				sale: cfg.showSale && item.price < item.regular - 0.004,
-				price: formatEur( item.price ),
-				was: formatEur( item.regular ),
-				badge: cfg.discountPct
+				sale: cfg.showPrices && cfg.showSale && item.price < item.regular - 0.004,
+				price: cfg.showPrices ? formatEur( item.price ) : '',
+				was: cfg.showPrices ? formatEur( item.regular ) : '',
+				badge: ! cfg.showPrices ? '' : ( cfg.discountPct
 					? '-' + Math.round( diff / item.regular * 100 ) + '%'
-					: '-€' + Math.round( diff ),
+					: '-€' + Math.round( diff ) ),
 				url: item.url
 			};
 		} );
@@ -118,10 +159,10 @@
 			extLink: ext > 0 && ! solo,
 			extLabel: 'Voeg ' + pluralExt( ext ) + ' toe →',
 			extUrl: items.ext.url,
-			total: formatEur( total ),
-			totalWas: formatEur( totalWas ),
-			save: 'Je bespaart ' + formatEur( totalWas - total ),
-			onSale: cfg.showSale && total < totalWas - 0.004,
+			total: cfg.showPrices ? formatEur( total ) : '',
+			totalWas: cfg.showPrices ? formatEur( totalWas ) : '',
+			save: cfg.showPrices ? 'Je bespaart ' + formatEur( totalWas - total ) : '',
+			onSale: cfg.showPrices && cfg.showSale && total < totalWas - 0.004,
 			ctaUrl: solo ? items.ext.url : items[ set ].url,
 			image: solo ? 'ext' : String( set ),
 			cols: cols
@@ -129,15 +170,23 @@
 	}
 
 	function init( root ) {
+		if ( initialized.has( root ) ) {
+			return;
+		}
 		var cfg;
 		try {
 			cfg = JSON.parse( root.getAttribute( 'data-config' ) || '' );
 		} catch ( e ) {
+			cfg = null;
+		}
+		if ( ! validConfig( cfg ) ) {
+			// The server-rendered state stays usable; make the cause findable.
+			if ( typeof console !== 'undefined' && console.warn ) {
+				console.warn( 'Woo Party Chef: invalid data-config, planner is not interactive.', root );
+			}
 			return;
 		}
-		if ( ! cfg || ! cfg.colors ) {
-			return;
-		}
+		initialized.add( root );
 
 		var state = {
 			color: root.getAttribute( 'data-color' ),
@@ -161,12 +210,12 @@
 		}
 
 		function setHref( el, url ) {
-			if ( el && el.getAttribute( 'href' ) !== url ) {
+			if ( el && validUrl( url ) && el.getAttribute( 'href' ) !== url ) {
 				el.setAttribute( 'href', url );
 			}
 		}
 
-		function render() {
+		function render( announce ) {
 			var color = cfg.colors[ state.color ];
 			var s = compute( color, state.n, cfg );
 			state.n = s.n;
@@ -235,6 +284,10 @@
 					return;
 				}
 				el.setAttribute( 'data-active', col.active ? 'true' : 'false' );
+				var pickButton = el.querySelector( '[data-pick]' );
+				if ( pickButton ) {
+					pickButton.setAttribute( 'aria-pressed', col.active ? 'true' : 'false' );
+				}
 
 				var price = ref( 'price', el );
 				if ( price ) {
@@ -255,6 +308,10 @@
 				}
 				setHref( ref( 'url', el ), col.url );
 			} );
+			if ( announce ) {
+				setText( ref( 'status' ), color.label + ', ' + s.n + ' personen. ' + s.title + '. ' + s.text +
+					( cfg.showPrices ? ' Totaal ' + s.total + '.' : '' ) );
+			}
 		}
 
 		root.addEventListener( 'click', function ( event ) {
@@ -266,9 +323,9 @@
 			var colorBtn = target.closest( '[data-pick-color]' );
 			if ( colorBtn ) {
 				var key = colorBtn.getAttribute( 'data-pick-color' );
-				if ( cfg.colors[ key ] ) {
+				if ( Object.prototype.hasOwnProperty.call( cfg.colors, key ) ) {
 					state.color = key;
-					render();
+					render( true );
 				}
 				return;
 			}
@@ -276,7 +333,7 @@
 			var stepBtn = target.closest( '[data-step]' );
 			if ( stepBtn ) {
 				state.n += parseInt( stepBtn.getAttribute( 'data-step' ), 10 ) || 0;
-				render();
+				render( true );
 				return;
 			}
 
@@ -289,18 +346,49 @@
 			if ( col ) {
 				var pick = col.getAttribute( 'data-col' );
 				state.n = pick === 'ext' ? 1 : parseInt( pick, 10 );
-				render();
+				render( true );
 			}
 		} );
 
-		if ( ! cfg.colors[ state.color ] ) {
+		if ( ! Object.prototype.hasOwnProperty.call( cfg.colors, state.color ) ) {
 			state.color = Object.keys( cfg.colors )[ 0 ];
 		}
-		render();
+		render( false );
+	}
+
+	// The Elementor editor re-renders widgets after page load. Listen only there,
+	// through Elementor's own hook, instead of observing every DOM change.
+	var elementorBound = false;
+	function bindElementor() {
+		var frontend = typeof window !== 'undefined' ? window.elementorFrontend : null;
+		if ( elementorBound || ! frontend || ! frontend.hooks || typeof frontend.isEditMode !== 'function' || ! frontend.isEditMode() ) {
+			return;
+		}
+		elementorBound = true;
+		frontend.hooks.addAction( 'frontend/element_ready/global', function ( $scope ) {
+			var el = $scope && $scope[ 0 ];
+			if ( ! el || el.nodeType !== 1 ) {
+				return;
+			}
+			if ( el.matches( '.woopc[data-config]' ) ) {
+				init( el );
+			}
+			el.querySelectorAll( '.woopc[data-config]' ).forEach( init );
+		} );
 	}
 
 	function boot() {
 		document.querySelectorAll( '.woopc[data-config]' ).forEach( init );
+		// Covers Elementor initialising before this script.
+		bindElementor();
+	}
+
+	if ( typeof window !== 'undefined' ) {
+		// Elementor fires this through jQuery; listen natively as well.
+		window.addEventListener( 'elementor/frontend/init', bindElementor );
+		if ( window.jQuery ) {
+			window.jQuery( window ).on( 'elementor/frontend/init', bindElementor );
+		}
 	}
 
 	if ( document.readyState === 'loading' ) {

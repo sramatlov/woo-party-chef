@@ -28,6 +28,20 @@
 	font-family: var(--woopc-body);
 	color: var(--woopc-text);
 	box-sizing: border-box;
+	container-type: inline-size;
+	container-name: woopc;
+}
+
+.woopc .woopc__sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
 }
 
 .woopc *,
@@ -71,6 +85,12 @@
 	align-items: center;
 	justify-content: center;
 	padding: clamp(12px, 3vw, 32px);
+}
+
+.woopc .woopc__image {
+	display: block;
+	width: 100%;
+	max-width: min(520px, 62vw);
 }
 
 .woopc .woopc__img {
@@ -1012,7 +1032,26 @@
 	}
 }
 
-@media (max-width: 639px) {
+@media (max-width: 759px) {
+	.woopc .woopc__table-wrap {
+		display: none;
+	}
+
+	.woopc .woopc__cards {
+		display: flex;
+	}
+
+	.woopc .woopc__advice-body {
+		min-height: 96px;
+	}
+
+	.woopc .woopc__cta {
+		flex-basis: 100%;
+	}
+}
+
+/* Narrow Elementor containers also need cards on a wide desktop viewport. */
+@container woopc (max-width: 759px) {
 	.woopc .woopc__table-wrap {
 		display: none;
 	}

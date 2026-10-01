@@ -25,7 +25,7 @@ class WOOPC_Products {
 	/**
 	 * Transient holding the resolved product IDs (IDs only, never objects).
 	 */
-	const IDS_TRANSIENT = 'woopc_cdp_product_ids_v1';
+	const IDS_TRANSIENT = 'woopc_cdp_product_ids_v2';
 
 	/**
 	 * Set sizes in persons. 'ext' is the single-station extension set.
@@ -78,7 +78,48 @@ class WOOPC_Products {
 			),
 		);
 
-		return (array) apply_filters( 'woopc_cdp_catalogue', $catalogue );
+		$filtered = apply_filters( 'woopc_cdp_catalogue', $catalogue );
+		if ( ! is_array( $filtered ) ) {
+			return array();
+		}
+
+		$validated = array();
+		foreach ( $filtered as $color => $config ) {
+			if ( ! is_string( $color ) || sanitize_key( $color ) !== $color || '' === $color || in_array( $color, array( '__proto__', 'constructor', 'prototype' ), true ) || ! is_array( $config ) ) {
+				continue;
+			}
+			if ( ! is_string( $config['label'] ?? null ) || ! is_string( $config['name'] ?? null ) || ! is_array( $config['products'] ?? null ) ) {
+				continue;
+			}
+			$label = sanitize_text_field( $config['label'] );
+			$name  = sanitize_text_field( $config['name'] );
+			if ( '' === $label || '' === $name ) {
+				continue;
+			}
+			$products = array();
+			foreach ( array_merge( array_map( 'strval', self::SIZES ), array( 'ext' ) ) as $key ) {
+				$ref = $config['products'][ $key ] ?? null;
+				if ( ! is_array( $ref ) || ! is_string( $ref['sku'] ?? '' ) || ! is_string( $ref['slug'] ?? '' ) ) {
+					break;
+				}
+				$sku  = sanitize_text_field( $ref['sku'] ?? '' );
+				$slug = sanitize_title( $ref['slug'] ?? '' );
+				if ( '' === $sku && '' === $slug ) {
+					break;
+				}
+				$products[ $key ] = array( 'sku' => $sku, 'slug' => $slug );
+			}
+			if ( count( $products ) !== count( self::SIZES ) + 1 ) {
+				continue;
+			}
+			$validated[ $color ] = array(
+				'label'    => $label,
+				'name'     => $name,
+				'swatch'   => is_string( $config['swatch'] ?? null ) ? ( sanitize_hex_color( $config['swatch'] ) ?: '#FFFFFF' ) : '#FFFFFF',
+				'products' => $products,
+			);
+		}
+		return $validated;
 	}
 
 	/**
@@ -88,25 +129,46 @@ class WOOPC_Products {
 	 * @return array<string, array<string, int>> color => key => product ID.
 	 */
 	public static function get_product_ids( bool $refresh = false ): array {
+		$catalogue = self::get_catalogue();
+		$signature = md5( (string) wp_json_encode( $catalogue ) );
 		if ( ! $refresh ) {
 			$cached = get_transient( self::IDS_TRANSIENT );
-			if ( is_array( $cached ) ) {
-				return $cached;
+			if ( is_array( $cached ) && ( $cached['signature'] ?? null ) === $signature && self::valid_cached_ids( $cached['ids'] ?? null, $catalogue ) ) {
+				return $cached['ids'];
 			}
 		}
 
 		$ids = array();
-		foreach ( self::get_catalogue() as $color => $config ) {
+		$complete = ! empty( $catalogue );
+		foreach ( $catalogue as $color => $config ) {
 			foreach ( (array) ( $config['products'] ?? array() ) as $key => $ref ) {
 				$ids[ $color ][ (string) $key ] = self::resolve_product_id( (array) $ref );
+				$complete = $complete && $ids[ $color ][ (string) $key ] > 0;
 			}
 		}
 
 		// Short lifetime when something is missing so a fixed SKU shows up quickly.
-		$complete = ! in_array( 0, array_merge( ...array_values( array_map( 'array_values', $ids ) ) ), true );
-		set_transient( self::IDS_TRANSIENT, $ids, $complete ? 12 * HOUR_IN_SECONDS : 15 * MINUTE_IN_SECONDS );
+		set_transient( self::IDS_TRANSIENT, array( 'signature' => $signature, 'ids' => $ids ), $complete ? 12 * HOUR_IN_SECONDS : 15 * MINUTE_IN_SECONDS );
 
 		return $ids;
+	}
+
+	/** Rejects corrupted ID caches and catalogue changes. */
+	private static function valid_cached_ids( $ids, array $catalogue ): bool {
+		if ( ! is_array( $ids ) || array_keys( $ids ) !== array_keys( $catalogue ) ) {
+			return false;
+		}
+		foreach ( $catalogue as $color => $config ) {
+			if ( ! is_array( $ids[ $color ] ) || array_keys( $ids[ $color ] ) !== array_keys( $config['products'] ) ) {
+				return false;
+			}
+			foreach ( $ids[ $color ] as $id ) {
+				if ( ! is_int( $id ) || $id < 0 ) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -202,7 +264,7 @@ class WOOPC_Products {
 			foreach ( array_keys( (array) ( $config['products'] ?? array() ) ) as $key ) {
 				$key     = (string) $key;
 				$product = wc_get_product( $ids[ $color ][ $key ] ?? 0 );
-				$item    = $product ? self::get_item_data( $product ) : null;
+				$item    = $product instanceof \WC_Product ? self::get_item_data( $product ) : null;
 				if ( null === $item ) {
 					$complete = false;
 					break;
@@ -251,20 +313,29 @@ class WOOPC_Products {
 			return null;
 		}
 
-		$price   = (float) wc_get_price_to_display( $product );
-		$regular = (float) wc_get_price_to_display( $product, array( 'price' => $product->get_regular_price() ) );
+		$display_price   = wc_get_price_to_display( $product );
+		$display_regular = wc_get_price_to_display( $product, array( 'price' => $product->get_regular_price() ) );
+		if ( ! is_numeric( $display_price ) || ! is_numeric( $display_regular ) ) {
+			return null;
+		}
+		$price   = (float) $display_price;
+		$regular = (float) $display_regular;
 
-		if ( $price <= 0 ) {
+		if ( ! is_finite( $price ) || ! is_finite( $regular ) || round( $price, 2 ) <= 0 || $price > PHP_FLOAT_MAX / self::MAX_PERSONS || $regular > PHP_FLOAT_MAX / self::MAX_PERSONS ) {
 			return null;
 		}
 		if ( $regular < $price ) {
 			$regular = $price;
 		}
+		$url = esc_url_raw( (string) get_permalink( $product->get_id() ), array( 'http', 'https' ) );
+		if ( '' === $url ) {
+			return null;
+		}
 
 		return array(
 			'price'   => round( $price, 2 ),
 			'regular' => round( $regular, 2 ),
-			'url'     => (string) get_permalink( $product->get_id() ),
+			'url'     => $url,
 			'image'   => (int) $product->get_image_id(),
 			// Same ACF true/false field as Woo Card Chef's PFAS-vrij badge.
 			'pfas'    => '1' === (string) get_post_meta( $product->get_id(), 'badge_pfas_vrij', true ),
@@ -309,9 +380,9 @@ class WOOPC_Products {
 		}
 
 		$spare     = $set + $ext - $n;
-		$total     = ( $solo ? 0.0 : $items[ (string) $set ]['price'] ) + $ext * $items['ext']['price'];
-		$total_was = ( $solo ? 0.0 : $items[ (string) $set ]['regular'] ) + $ext * $items['ext']['regular'];
-		$on_sale   = $show_sale && $total < $total_was - 0.004;
+		$total     = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['price'] ) + $ext * $items['ext']['price'] : 0.0;
+		$total_was = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['regular'] ) + $ext * $items['ext']['regular'] : 0.0;
+		$on_sale   = $show_price && $show_sale && $total < $total_was - 0.004;
 		$stations  = $set + $ext;
 
 		if ( $solo ) {
@@ -347,16 +418,16 @@ class WOOPC_Products {
 		$cols = array();
 		foreach ( array_merge( array_map( 'strval', self::SIZES ), array( 'ext' ) ) as $key ) {
 			$item         = $items[ $key ];
-			$col_sale     = $show_sale && $item['price'] < $item['regular'] - 0.004;
-			$diff         = $item['regular'] - $item['price'];
+			$col_sale     = $show_price && $show_sale && $item['price'] < $item['regular'] - 0.004;
+			$diff         = $show_price ? $item['regular'] - $item['price'] : 0.0;
 			$cols[ $key ] = array(
 				'active' => 'ext' === $key ? $ext > 0 : (int) $key === $set,
 				'sale'   => $col_sale,
-				'price'  => self::format_eur( $item['price'] ),
-				'was'    => self::format_eur( $item['regular'] ),
-				'badge'  => $pct
+				'price'  => $show_price ? self::format_eur( $item['price'] ) : '',
+				'was'    => $show_price ? self::format_eur( $item['regular'] ) : '',
+				'badge'  => ! $show_price ? '' : ( $pct
 					? '-' . (int) round( $diff / $item['regular'] * 100 ) . '%'
-					: '-€' . (int) round( $diff ),
+					: '-€' . (int) round( $diff ) ),
 				'url'    => $item['url'],
 			);
 		}
@@ -372,9 +443,9 @@ class WOOPC_Products {
 			'ext_link'  => $ext > 0 && ! $solo,
 			'ext_label' => 'Voeg ' . self::plural_ext( $ext ) . ' toe →',
 			'ext_url'   => $items['ext']['url'],
-			'total'     => self::format_eur( $total ),
-			'total_was' => self::format_eur( $total_was ),
-			'save'      => 'Je bespaart ' . self::format_eur( $total_was - $total ),
+			'total'     => $show_price ? self::format_eur( $total ) : '',
+			'total_was' => $show_price ? self::format_eur( $total_was ) : '',
+			'save'      => $show_price ? 'Je bespaart ' . self::format_eur( $total_was - $total ) : '',
 			'on_sale'   => $on_sale,
 			'cta_url'   => $solo ? $items['ext']['url'] : $items[ (string) $set ]['url'],
 			// Product shown in the planner: the main purchase (8-set for 9-12 persons).

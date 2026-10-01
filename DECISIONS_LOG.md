@@ -1,5 +1,45 @@
 # Decisions Log - Woo Party Chef
 
+## v1.1.0 (1 October 2026)
+
+Implemented the explicitly selected review items: 2, 3, 8, 9, 10, 11, 12,
+13, 14, 15 and 16. Product availability rules, recommendation choices, price
+breakdown, visible purchase-button copy, PFAS feature copy and discount colors
+remain outside this release's scope.
+
+- Empty shortcode pages enter the purge registry before catalogue validation.
+- WP Rocket's registered native Kinsta bridge takes priority. A guarded MU-plugin
+  post-purge fallback supports Kinsta without that bridge; no blanket site flush.
+- Preserve the visual comparison columns and expose each product as a logical
+  table row with named column headers for assistive technology. Add pressed
+  selection state and one polite advice announcement per interaction.
+- Preserve the first requested public anchor; suffix subsequent collisions and
+  generate unique internal label IDs for every instance.
+- Switch to cards below 760px of component width, with a viewport fallback.
+- Supersede the original delayed-script decision: exclude only this small
+  interactive script from Delay JS and retain deferred loading. Keep server
+  rendering and the existing RUCSS exclusions.
+- Discover first-visit CSS from normal content and Elementor data; print late
+  styles immediately before nested components when necessary.
+- Delegate active-image priority to WordPress by default, with explicit
+  `image_loading="eager|lazy"` overrides. Render the active image first and hide
+  entire wrappers to preserve Imagify picture layout.
+- Validate both server catalogue/cache data and browser configuration. Include a
+  catalogue signature in the ID transient and omit amounts entirely when prices
+  are disabled.
+- Commit the PHP/JS parity harness and targeted render/cache/browser regression
+  checks, with a PHP 7.4/8.3 CI matrix.
+
+### Decision: Elementor editor re-renders via Elementor's hook, not a MutationObserver
+**Chose:** Initialise re-rendered widgets through `elementorFrontend.hooks` (`frontend/element_ready/global`), registered only when `elementorFrontend.isEditMode()` is true.
+**Rejected:** A document-wide `MutationObserver` that stays active on every visitor page.
+**Why:** Only the editor replaces shortcode markup after load. A permanent observer runs a query for every DOM insertion (sliders, mini cart, lazyload) on the live campaign page for a case visitors never hit.
+
+### Decision: browser config validation must not hardcode server limits
+**Chose:** Validate `max` as a positive integer from the server and log a `console.warn` when a config is rejected.
+**Rejected:** Requiring `max === 12` and failing silently.
+**Why:** `WOOPC_Products::MAX_PERSONS` is the single source of truth. A hardcoded copy would silently disable all interaction after a server-side change; the warning makes any rejection traceable while the server-rendered state stays usable.
+
 ## v1.0.0 (October 2026)
 
 ### Decision: separate plugin, not a Woo Card Chef widget
