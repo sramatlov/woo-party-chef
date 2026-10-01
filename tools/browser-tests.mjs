@@ -61,6 +61,21 @@ try {
   await check(await page.locator('.woopc__cards').isVisible(), 'A narrow desktop Elementor container must show cards.');
   await check(!(await page.locator('.woopc__table-wrap').isVisible()), 'A narrow desktop container must hide the table.');
 
+  // Elementor's centred column containers leave widgets at their intrinsic width.
+  // Inline-size containment must not collapse that width, including before JS runs.
+  for (const [viewport, containerWidth] of [[1280, 1140], [1280, 600], [375, 343]]) {
+    await page.goto('about:blank');
+    await page.setViewportSize({ width: viewport, height: 1000 });
+    await page.setContent(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><style>body{margin:0;padding:16px;font-family:Arial,sans-serif}.e-con-inner{display:flex;flex-direction:column;align-items:center;width:${containerWidth}px;max-width:100%}.elementor-widget-shortcode{max-width:100%}${css}</style></head><body><div class="e-con-inner"><div class="elementor-widget-shortcode"><div class="elementor-widget-container"><div class="elementor-shortcode">${fixtures.html.first}</div></div></div></div></body></html>`);
+    const bounds = await page.locator('.woopc').boundingBox();
+    await check(Math.abs(bounds.width - containerWidth) < 1, `A centred Elementor widget must fill ${containerWidth}px before JavaScript.`);
+    await check(containerWidth < 760 ? await page.locator('.woopc__cards').isVisible() : await page.locator('.woopc__table-wrap').isVisible(), `Centred Elementor layout must match ${containerWidth}px of available width.`);
+    await page.addScriptTag({ content: js });
+    await page.getByRole('button', { name: 'Meer personen', exact: true }).click();
+    await check(await page.locator('.woopc').getAttribute('data-persons') === '5', `Centred Elementor interaction must work at ${containerWidth}px.`);
+    await check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Centred Elementor must not overflow at ${viewport}px.`);
+  }
+
   await render(fixtures.html.hidden, 375);
   await page.getByRole('button', { name: 'Meer personen', exact: true }).click();
   await check(await page.locator('.woopc').getAttribute('data-persons') === '5', 'The planner must work without price fields.');

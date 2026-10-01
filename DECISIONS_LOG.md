@@ -1,5 +1,18 @@
 # Decisions Log - Woo Party Chef
 
+## v1.1.1 (1 October 2026)
+
+The staging campaign's centred Elementor column collapsed its shortcode widget
+to zero pixels because `container-type: inline-size` removes the content's
+intrinsic width. Supply `contain-intrinsic-inline-size: 1265px`, matching the
+component's existing maximum inner width. Elementor's `max-width: 100%` still
+constrains the widget to the available space. This keeps container queries and
+server-rendered narrow layouts without changing the page's Elementor settings.
+
+The browser suite reproduces the original failure before applying the fix, then
+checks widths of 1140px, 600px and 343px, responsive layouts, interaction and
+horizontal overflow. JavaScript is deliberately absent for the first width check.
+
 ## v1.1.0 (1 October 2026)
 
 Implemented the explicitly selected review items: 2, 3, 8, 9, 10, 11, 12,

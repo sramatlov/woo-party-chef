@@ -1,5 +1,22 @@
 # Testing - Woo Party Chef
 
+## v1.1.1: centred Elementor regression (1 October 2026)
+
+The campaign page rendered valid products and assets in v1.1.0, but its centred
+Elementor shortcode widget measured zero pixels wide. A fixture with the same
+centred flex-column and nested shortcode wrappers failed before the CSS fix.
+After supplying an intrinsic inline size, all 48 browser assertions pass,
+including 12 new checks for centred containers at 1140px, 600px and 343px:
+width before JavaScript, responsive layout, first interaction and no overflow.
+The 60 PHP assertions, 224 calculation parity states and 16 browser-config
+validations also pass locally with PHP 8.3, Node 24 and installed Chrome.
+
+Installed v1.1.1 on the Kinsta staging campaign and purged only that URL through
+WP Rocket. The real component measures 1140px on desktop and 320px at a 375px
+viewport; desktop shows the comparison table and mobile shows cards without
+horizontal overflow. Person-count and finish changes update advice, prices and
+photos. This check used the existing authenticated WordPress browser session.
+
 ## v1.1.0: reproducible checks (1 October 2026)
 
 Run `npm test` with PHP and Node on PATH. The checked-in harness uses strict

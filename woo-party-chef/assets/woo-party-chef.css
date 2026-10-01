@@ -30,6 +30,8 @@
 	box-sizing: border-box;
 	container-type: inline-size;
 	container-name: woopc;
+	/* Preserve a preferred width in centred, shrink-to-fit Elementor widgets. */
+	contain-intrinsic-inline-size: 1265px;
 }
 
 .woopc .woopc__sr-only {
