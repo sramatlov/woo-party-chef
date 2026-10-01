@@ -1,7 +1,7 @@
 <?php
 /** Minimal deterministic WordPress/WooCommerce doubles; never shipped in the plugin ZIP. */
 define( 'ABSPATH', __DIR__ );
-define( 'WOOPC_VERSION', '1.1.1' );
+define( 'WOOPC_VERSION', '1.1.2' );
 define( 'WOOPC_URL', 'https://example.test/plugins/woo-party-chef/' );
 define( 'HOUR_IN_SECONDS', 3600 );
 define( 'MINUTE_IN_SECONDS', 60 );

@@ -61,6 +61,31 @@ try {
   await check(await page.locator('.woopc__cards').isVisible(), 'A narrow desktop Elementor container must show cards.');
   await check(!(await page.locator('.woopc__table-wrap').isVisible()), 'A narrow desktop container must hide the table.');
 
+  // Reproduce the staging Elementor kit overriding link typography on hover.
+  for (const width of [1280, 375]) {
+    await render(fixtures.html.first, width);
+    await page.locator('body').evaluate(el => el.classList.add('elementor-kit-13'));
+    await page.addStyleTag({ content: '.elementor-kit-13 a:hover,.elementor-kit-13 a:focus{font-family:RobotoFlex,sans-serif;font-weight:300}' });
+    await page.getByRole('button', { name: 'Kies de set voor 8 personen', exact: true }).click();
+    await page.getByRole('button', { name: 'Meer personen', exact: true }).click();
+    for (const selector of ['.woopc__cta', '.woopc__ext-link', width > 759 ? '.woopc__col-cta' : '.woopc__card-link']) {
+      const link = page.locator(selector).first();
+      await page.mouse.move(0, 0);
+      await link.evaluate(el => el.blur());
+      const typography = el => {
+        const style = getComputedStyle(el);
+        return { family: style.fontFamily, weight: style.fontWeight, size: style.fontSize, lineHeight: style.lineHeight };
+      };
+      const normal = await link.evaluate(typography);
+      await link.hover();
+      await check(JSON.stringify(await link.evaluate(typography)) === JSON.stringify(normal), `${selector} must retain its typography on hover at ${width}px.`);
+      await page.mouse.move(0, 0);
+      await link.focus();
+      await check(JSON.stringify(await link.evaluate(typography)) === JSON.stringify(normal), `${selector} must retain its typography on focus at ${width}px.`);
+      await link.evaluate(el => el.blur());
+    }
+  }
+
   // Elementor's centred column containers leave widgets at their intrinsic width.
   // Inline-size containment must not collapse that width, including before JS runs.
   for (const [viewport, containerWidth] of [[1280, 1140], [1280, 600], [375, 343]]) {

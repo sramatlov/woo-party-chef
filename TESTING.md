@@ -1,5 +1,28 @@
 # Testing - Woo Party Chef
 
+## v1.1.2: stable link typography (1 October 2026)
+
+Inspected the real staging CTA and comparison links through browser computed
+styles. Normal typography was MontserratVar/Montserrat, weight 500; forced hover
+changed it to RobotoFlex, weight 300 through `.elementor-kit-13 a:hover`.
+The inspection's temporary forced pseudo-states were cleared afterwards.
+
+The regression fixture applies conflicting Elementor link typography after the
+plugin stylesheet. Twelve new assertions compare font family, weight, size and
+line height on hover and focus for planner, extension, desktop comparison and
+mobile purchase links at 1280px and 375px. The original stylesheet fails this
+test; the scoped typography rules pass. All 60 browser assertions, 60 PHP
+assertions, 224 calculation parity states and 16 browser-config validations
+pass locally with PHP 8.3, Node 24 and installed Chrome.
+
+Updated the existing staging plugin from 1.1.1 to 1.1.2 through WordPress's
+plugin ZIP upload and replacement flow. The real campaign loaded the 1.1.2
+stylesheet and retained its 1140px desktop width. Browser computed styles for
+all four purchase/extension link classes remained MontserratVar/Montserrat,
+weight 500 under forced hover and focus. Cleared the temporary pseudo-states
+and purged only the campaign URL through WP Rocket. This verification used the
+existing authenticated WordPress browser session.
+
 ## v1.1.1: centred Elementor regression (1 October 2026)
 
 The campaign page rendered valid products and assets in v1.1.0, but its centred
