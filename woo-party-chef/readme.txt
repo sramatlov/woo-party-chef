@@ -1,7 +1,7 @@
 === Woo Party Chef ===
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.2.0
 License: GPLv2 or later
 
 Chef's Dinner Party set planner and comparison for bourgini.com, with live WooCommerce prices.
@@ -73,6 +73,9 @@ script is excluded from Delay JS, while remaining deferred. Head CSS is
 discovered from normal page content and Elementor data on the first visit.
 
 == Changelog ==
+
+= 1.2.0 =
+* Recommend an 8-person set plus a 4-person set for 12 persons instead of an 8-person set plus four extension sets. 9-11 persons are unchanged.
 
 = 1.1.2 =
 * Keep purchase-button and extension-link typography unchanged on hover and keyboard focus when Elementor applies global link fonts.

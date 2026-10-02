@@ -47,7 +47,7 @@ try {
   await first.getByRole('button', { name: 'Kies de set voor 8 personen', exact: true }).click();
   for (let i = 0; i < 4; i++) await first.getByRole('button', { name: 'Meer personen', exact: true }).click();
   await check(await first.getByRole('button', { name: 'Meer personen', exact: true }).isDisabled(), 'Person-count upper bound must remain 12.');
-  await check(await first.locator('[data-ref="ext-link"]').textContent() === 'Voeg 4 uitbreidingssets toe →', 'Extension purchase copy must be unchanged.');
+  await check(await first.locator('[data-ref="ext-link"]').textContent() === 'Voeg de set voor 4 personen toe →', 'Extension purchase copy must be unchanged.');
 
   for (const width of [320, 375, 640, 700, 800, 1280]) {
     await render(fixtures.html.first, width);

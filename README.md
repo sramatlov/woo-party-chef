@@ -4,7 +4,7 @@ WordPress plugin for bourgini.com that renders the **Chef's Dinner Party (CDP) v
 
 Built from the Claude Design handoff "CDP Vergelijker" (October 2026). Deliberately a separate plugin, not part of [Woo Card Chef](https://github.com/sramatlov/woo-card-chef); it only borrows Woo Card Chef's PFAS-vrij badge (styling, leaf icon and ACF field).
 
-- **Current version:** 1.1.2
+- **Current version:** 1.2.0
 - **Requires:** WordPress 6.0+, PHP 7.4+, WooCommerce 6.0+
 - **Target stack:** Hello Elementor, Elementor Pro, WooCommerce, WP Rocket (Remove Unused CSS, Delay JS), Imagify, Kinsta
 
@@ -12,7 +12,7 @@ Built from the Claude Design handoff "CDP Vergelijker" (October 2026). Deliberat
 
 Visitors pick a finish (Wit / Glazed Grey) and a number of persons (1-12). The section:
 
-1. recommends the matching set, plus extension sets above 8 persons;
+1. recommends the matching set, plus extension sets for 9-11 persons or a second 4-person set for 12;
 2. shows the total price, struck-through regular total and savings;
 3. shows the product photo and PFAS-vrij label of the recommended product;
 4. compares all sets (4, 5, 6, 8 persons and +1 extension station): a table on desktop, stacked cards below 760px of available width (also in narrow Elementor containers);
@@ -24,13 +24,14 @@ Recommendation rules (from the design handoff):
 |---|---|---|
 | 1 | Extension set only | Extension set |
 | 2-8 | Smallest set with at least that many places | That set |
-| 9-12 | 8-person set + (n - 8) extension sets | 8-person set |
+| 9-11 | 8-person set + (n - 8) extension sets | 8-person set |
+| 12 | 8-person set + 4-person set | 8-person set |
 
 Extra lines: 2-3 persons explain that the smallest set is for 4; 7 persons offer "6-person set + 1 extension set" as an alternative.
 
 ## Installation
 
-1. Upload `woo-party-chef-v1.1.2-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
+1. Upload `woo-party-chef-v1.2.0-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
 2. Activate. WooCommerce must be active.
 3. Add an Elementor **Shortcode** widget to the campaign container:
 
@@ -46,7 +47,8 @@ the installed and uploaded versions. After the update succeeds, use WP Rocket's
 **Purge this URL** on the campaign page and verify both desktop and mobile.
 Version 1.1.1 fixes a zero-width shortcode widget in centred Elementor containers.
 Version 1.1.2 keeps purchase-link fonts unchanged on hover and keyboard focus
-when Elementor's global link styles apply. The shortcode remains
+when Elementor's global link styles apply. Version 1.2.0 recommends an
+8-person set plus a 4-person set for 12 persons. The shortcode remains
 `[woo_party_chef]`. See [TESTING.md](TESTING.md) for the recorded staging
 installation and checks.
 
