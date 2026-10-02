@@ -1,5 +1,37 @@
 # Testing - Woo Party Chef
 
+## v1.2.0: 12 persons = 8-person + 4-person set (2 October 2026)
+
+`npm test` was not run locally because this machine has no PHP or Node. GitHub Actions ran
+`checks.yml` twice on commit `c7a7f27` (push and pull request #3). PHP 7.4, PHP
+8.3 and the browser suite all passed. The PHP suite adds four checks for 12
+persons: title, totals, both set columns active, CTA/second-link targets and
+twelve set dots without extension dots. The 224 PHP/JS parity states cover the
+new branch in both implementations. The browser suite's 12-person link copy now
+expects "Voeg de set voor 4 personen toe →".
+
+The `woo-party-chef-v1.2.0-install.zip` package was built with `tools/build-install.ps1` under Windows
+PowerShell 5.1. That version needs `Add-Type -AssemblyName System.IO.Compression` loaded first.
+The package contains the seven runtime files, identical to `main` after merge commit `f53f04d`.
+The package was installed on the Kinsta staging campaign by uploading the ZIP and replacing the existing installation.
+
+Staging checks on [Elk diner een feest!](https://env-bourginicom-premium.kinsta.cloud/elk-diner-een-feest/):
+
+- **Desktop, 1140px component, signed-in browser:** stylesheet and script load
+  `ver=1.2.0`. For 12 persons in Wit and Glazed Grey, the advice reads
+  "8 personen + 4 personen". Columns 4 and 8 are active and the extension column is not.
+  The total is the 8-person set plus the 4-person set (Wit € 318,99; Grey € 334,99,
+  regular € 344,98). The CTA targets the 8-person set and the second link targets the
+  4-person set. All twelve dots are set places and the extension legend is hidden.
+- **Mobile, 375px viewport, anonymous request through WP Rocket:** the
+  delay-excluded script (`data-nowprocket`, `ver=1.2.0`) initialises after load.
+  Cards replace the table. The 4- and 8-person cards both show "Jouw keuze". The
+  335px component has no horizontal overflow. The advice, totals and second link match desktop.
+
+Staging uses test prices. One example is a Glazed Grey extension set at € 14,00, which makes four
+extension sets cheaper than the 4-person set there. Live prices on 2 October 2026
+were € 119,99 for the 4-person set versus 4 × € 39,99 for extension sets.
+
 ## v1.1.2: stable link typography (1 October 2026)
 
 Inspected the real staging CTA and comparison links through browser computed
