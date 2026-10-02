@@ -373,28 +373,37 @@ class WOOPC_Products {
 			$ext = $n - 8;
 		}
 
+		// 12 persons: a second 4-person set instead of four single stations.
+		$set2 = 0;
+		if ( 12 === $n ) {
+			$set2 = 4;
+			$ext  = 0;
+		}
+
 		$solo = 1 === $n;
 		if ( $solo ) {
 			$set = 0;
 			$ext = 1;
 		}
 
-		$spare     = $set + $ext - $n;
-		$total     = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['price'] ) + $ext * $items['ext']['price'] : 0.0;
-		$total_was = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['regular'] ) + $ext * $items['ext']['regular'] : 0.0;
+		$spare     = $set + $set2 + $ext - $n;
+		$total     = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['price'] ) + ( $set2 ? $items[ (string) $set2 ]['price'] : 0.0 ) + $ext * $items['ext']['price'] : 0.0;
+		$total_was = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['regular'] ) + ( $set2 ? $items[ (string) $set2 ]['regular'] : 0.0 ) + $ext * $items['ext']['regular'] : 0.0;
 		$on_sale   = $show_price && $show_sale && $total < $total_was - 0.004;
-		$stations  = $set + $ext;
+		$stations  = $set + $set2 + $ext;
 
 		if ( $solo ) {
 			$title = $color['name'] . ' uitbreidingsset';
 			$text  = 'Eén kookstation van 250 W met eigen keramisch bord en bakplaat. Later uit te breiden tot een complete set.';
 		} else {
-			$title = $ext ? $set . ' personen + ' . self::plural_ext( $ext ) : $color['name'] . ' voor ' . $set . ' personen';
+			$title = $set2 ? $set . ' personen + ' . $set2 . ' personen' : ( $ext ? $set . ' personen + ' . self::plural_ext( $ext ) : $color['name'] . ' voor ' . $set . ' personen' );
 			$text  = $stations . ' kookstations van 250 W, samen ' . self::format_watt( $stations * self::WATT_PER_STATION ) . '.';
 			if ( $spare > 0 ) {
 				$text .= ' Je houdt ' . ( 1 === $spare ? 'één plek' : $spare . ' plekken' ) . ' over voor een extra gast.';
 			}
-			if ( $ext ) {
+			if ( $set2 ) {
+				$text .= ' Twee complete sets: één voor ' . $set . ' en één voor ' . $set2 . ' personen.';
+			} elseif ( $ext ) {
 				$text .= ' Elke uitbreidingsset voegt één eigen kookstation met bord en bakplaat toe.';
 			}
 		}
@@ -411,6 +420,9 @@ class WOOPC_Products {
 		for ( $i = 0; $i < $set; $i++ ) {
 			$dots[] = $i < $n ? 'guest' : 'spare';
 		}
+		for ( $i = 0; $i < $set2; $i++ ) {
+			$dots[] = 'guest';
+		}
 		for ( $i = 0; $i < $ext; $i++ ) {
 			$dots[] = 'ext';
 		}
@@ -421,7 +433,7 @@ class WOOPC_Products {
 			$col_sale     = $show_price && $show_sale && $item['price'] < $item['regular'] - 0.004;
 			$diff         = $show_price ? $item['regular'] - $item['price'] : 0.0;
 			$cols[ $key ] = array(
-				'active' => 'ext' === $key ? $ext > 0 : (int) $key === $set,
+				'active' => 'ext' === $key ? $ext > 0 : ( (int) $key === $set || (int) $key === $set2 ),
 				'sale'   => $col_sale,
 				'price'  => $show_price ? self::format_eur( $item['price'] ) : '',
 				'was'    => $show_price ? self::format_eur( $item['regular'] ) : '',
@@ -440,9 +452,9 @@ class WOOPC_Products {
 			'dots'      => $dots,
 			'has_ext'   => $ext > 0,
 			'has_spare' => $spare > 0,
-			'ext_link'  => $ext > 0 && ! $solo,
-			'ext_label' => 'Voeg ' . self::plural_ext( $ext ) . ' toe →',
-			'ext_url'   => $items['ext']['url'],
+			'ext_link'  => ( $ext > 0 || $set2 > 0 ) && ! $solo,
+			'ext_label' => $set2 ? 'Voeg de set voor ' . $set2 . ' personen toe →' : 'Voeg ' . self::plural_ext( $ext ) . ' toe →',
+			'ext_url'   => $set2 ? $items[ (string) $set2 ]['url'] : $items['ext']['url'],
 			'total'     => $show_price ? self::format_eur( $total ) : '',
 			'total_was' => $show_price ? self::format_eur( $total_was ) : '',
 			'save'      => $show_price ? 'Je bespaart ' . self::format_eur( $total_was - $total ) : '',

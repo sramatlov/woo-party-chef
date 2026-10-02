@@ -38,6 +38,11 @@ check( 'Voeg 3 uitbreidingssets toe →' === $eleven['ext_label'], 'Extension CT
 check( '€ 359,80' === $eleven['total'], 'The existing set-plus-three-extensions total must remain correct.' );
 check( 'Liever precies 7 plekken? Kies de set voor 6 personen met 1 uitbreidingsset voor € 239,90.' === WOOPC_Products::compute_state( $colors['grey'], 7, $settings )['alt'], 'The seven-person alternative must remain unchanged.' );
 check( 'ext' === WOOPC_Products::compute_state( $colors['grey'], 1, $settings )['image'], 'Solo advice must be unchanged.' );
+$twelve = WOOPC_Products::compute_state( $colors['grey'], 12, $settings );
+check( '8 personen + 4 personen' === $twelve['title'] && '€ 399,90' === $twelve['total'] && '€ 439,90' === $twelve['total_was'], 'Twelve persons need an 8-person plus a 4-person set.' );
+check( $twelve['cols']['8']['active'] && $twelve['cols']['4']['active'] && ! $twelve['cols']['ext']['active'], 'Twelve persons activate both set columns, not the extension.' );
+check( '8' === $twelve['image'] && 'https://example.test/product/9' === $twelve['cta_url'] && 'https://example.test/product/6' === $twelve['ext_url'], 'Twelve persons buy the 8-person set and link the 4-person set.' );
+check( 'Voeg de set voor 4 personen toe →' === $twelve['ext_label'] && ! $twelve['has_ext'] && ! $twelve['has_spare'] && array( 'guest' ) === array_values( array_unique( $twelve['dots'] ) ) && 12 === count( $twelve['dots'] ), 'Twelve persons show twelve set places without extension dots.' );
 
 WOOPC_Cache_Purger::init();
 WOOPC_Shortcode::init();

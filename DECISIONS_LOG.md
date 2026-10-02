@@ -1,5 +1,12 @@
 # Decisions Log - Woo Party Chef
 
+## v1.2.0 (2 October 2026)
+
+### Decision: 12 persons = 8-person set + 4-person set
+**Chose:** For exactly 12 persons, recommend the 8-person set plus the 4-person set. The 4-person column is active alongside the 8-person column, the second link adds the 4-person set, and all twelve places are drawn as set places.
+**Rejected:** The design handoff's 8-person set + 4 extension sets; changing 9-11 persons as well.
+**Why:** On bourgini.com (2 October 2026) the Glazed Grey 4-person set costs € 119,99 versus 4 × € 39,99 = € 159,96 for four extension sets, and every extension set needs its own power outlet (two outlets instead of five). The rule is tied to 12 itself, not to `MAX_PERSONS`, so raising the limit cannot recommend too few places. 9-11 persons keep extension sets by explicit choice.
+
 ## v1.1.2 (1 October 2026)
 
 The staging Elementor kit's `.elementor-kit-13 a:hover` changes the font family
