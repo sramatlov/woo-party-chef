@@ -439,7 +439,7 @@ class WOOPC_Products {
 				'was'    => $show_price ? self::format_eur( $item['regular'] ) : '',
 				'badge'  => ! $show_price ? '' : ( $pct
 					? '-' . (int) round( $diff / $item['regular'] * 100 ) . '%'
-					: '-€' . (int) round( $diff ) ),
+					: '-' . self::format_discount_eur( $diff ) ),
 				'url'    => $item['url'],
 			);
 		}
@@ -457,7 +457,7 @@ class WOOPC_Products {
 			'ext_url'   => $set2 ? $items[ (string) $set2 ]['url'] : $items['ext']['url'],
 			'total'     => $show_price ? self::format_eur( $total ) : '',
 			'total_was' => $show_price ? self::format_eur( $total_was ) : '',
-			'save'      => $show_price ? 'Je bespaart ' . self::format_eur( $total_was - $total ) : '',
+			'save'      => $show_price ? 'Je bespaart ' . self::format_discount_eur( $total_was - $total ) : '',
 			'on_sale'   => $on_sale,
 			'cta_url'   => $solo ? $items['ext']['url'] : $items[ (string) $set ]['url'],
 			// Product shown in the planner: the main purchase (8-set for 9-12 persons).
@@ -494,5 +494,15 @@ class WOOPC_Products {
 	 */
 	public static function format_eur( float $amount ): string {
 		return '€ ' . number_format( max( 0.0, $amount ), 2, ',', '.' );
+	}
+
+	/**
+	 * Whole-euro savings, matching Woo Card Chef's euro badges (mirrored in JS).
+	 *
+	 * @param float $amount Amount saved.
+	 * @return string
+	 */
+	public static function format_discount_eur( float $amount ): string {
+		return '€' . number_format( max( 0.0, $amount ), 0, ',', '.' );
 	}
 }

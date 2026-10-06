@@ -1,5 +1,60 @@
 # Testing - Woo Party Chef
 
+## v1.3.0: adaptive planner and rollback (6 October 2026)
+
+Local checks pass with PHP 8.3.35, Node and installed Chrome: 72 PHP assertions,
+232 calculation parity states, 16 config validations and 252 browser assertions.
+The default and invalid layout attributes render auto; classic renders the
+rollback attribute. At a 1280x640 CSS-pixel viewport with a 1140px component,
+the initial four-person test planner shrinks from 765px (classic) to 482px
+(auto), approximately 37%. This works before JavaScript. Body text keeps its
+font size and interactive controls remain at least 44px.
+
+Resizing to a tall viewport restores the spacious baseline, while classic
+ignores the new height adaptation. Checked unclipped advice, totals and purchase
+links for both finishes and all counts 1-12 at 1024x768, 1440x900, 1920x1080,
+320x640, 375x667 and 768x1024, plus a 600px Elementor container on desktop.
+Existing responsive, interaction, hidden-price, editor and typography checks
+pass. Screenshots use synthetic product images; the measured heights are local
+fixtures rather than a guarantee for the site's fonts/header/hosting stack.
+
+Additionally compared computed dimensions and styles of 15 planner elements
+against the actual v1.2.2 ZIP stylesheet at 1280x640, 1920x1080 and 375x667:
+classic matches exactly at all three sizes.
+
+Retain the v1.2.2 ZIP for full rollback, or set `layout="classic"` and purge
+the campaign URL for a layout-only rollback. Built the new installation ZIP
+and checked that all seven packaged files match the source. On 6 October 2026
+the user confirmed that the updated plugin works correctly after trying it.
+The target environment was not specified; no independent deployment or live
+verification was performed by the agent for this release.
+
+## v1.2.2: included-features panel styling (6 October 2026)
+
+Checked actual computed styles in Chrome at 1280px and 375px: the features panel
+matches the planner and desktop comparison's white background, 10px corner
+radius, shadow and zero border width. All six benefits remain present, with no
+horizontal overflow. Inspected desktop and mobile panel screenshots. The 69 PHP
+assertions pass; the prior discount change is included in this package.
+Built and checked the seven-file installation ZIP. This release has not been
+installed or checked on staging or production.
+
+## v1.2.1: consistent whole-euro discounts (6 October 2026)
+
+The planner uses the whole-euro rounding of Woo Card Chef's euro badges and
+matches the comparison's euro savings. Screenshot regressions cover 124.99 minus
+115.00 becoming €10 and 39.99 minus 14.00 becoming €26, while current and regular
+prices retain two decimals. Boundary cases cover 0.49, 0.50 and 1,234.50 euros;
+combined savings round once after addition. Eight additional PHP/JS parity
+states cover these cases and multi-set recommendations, including 12 persons.
+
+Local checks pass with PHP 8.3.35, Node and installed Chrome: 69 PHP assertions,
+232 PHP/JS calculation states, 16 config validations and 73 browser assertions.
+Browser checks cover initial planner savings and post-interaction extension
+savings at 320, 375, 640, 700, 800 and 1280px. The install ZIP is built from the
+seven runtime files. This release has not been installed or verified on staging
+or production.
+
 ## v1.2.0: 12 persons = 8-person + 4-person set (2 October 2026)
 
 `npm test` was not run locally because this machine has no PHP or Node. GitHub Actions ran

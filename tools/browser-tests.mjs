@@ -14,17 +14,68 @@ const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 let checks = 0;
 async function check(ok, message) { assert.ok(ok, message); ++checks; }
-async function render(html, width, containerWidth = '100%') {
+async function render(html, width, containerWidth = '100%', height = 1000, interactive = true) {
   await page.goto('about:blank');
-  await page.setViewportSize({ width, height: 1000 });
+  await page.setViewportSize({ width, height });
   await page.setContent(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Woo Party Chef regression fixture</title><style>body{margin:0;padding:16px;font-family:Arial,sans-serif}main{width:${containerWidth};max-width:100%}${css}</style></head><body><main>${html}</main></body></html>`);
-  await page.addScriptTag({ content: js });
+  if (interactive) await page.addScriptTag({ content: js });
 }
 
 try {
+  const plannerMetrics = () => page.locator('.woopc__planner').evaluate(el => {
+    const find = selector => el.querySelector(selector);
+    const style = selector => getComputedStyle(find(selector));
+    return {height: el.getBoundingClientRect().height, columns: getComputedStyle(el).gridTemplateColumns,
+      padding: style('.woopc__controls').padding, image: find('.woopc__media').getBoundingClientRect().height,
+      titleFont: style('.woopc__advice-title').fontSize, bodyFont: style('.woopc__advice-body').fontSize,
+      bodyMin: style('.woopc__advice-body').minHeight, button: find('.woopc__step-btn').getBoundingClientRect().height};
+  });
+  await render(fixtures.html.classic, 1280, '1140px', 640, false);
+  const classicLaptop = await plannerMetrics();
+  await render(fixtures.html.first, 1280, '1140px', 640, false);
+  const autoLaptop = await plannerMetrics();
+  await check(autoLaptop.height < classicLaptop.height * 0.8 && autoLaptop.height <= 520, 'A short laptop viewport must shrink the initial planner by at least 20% to at most 520px, before JavaScript.');
+  await check(autoLaptop.bodyFont === classicLaptop.bodyFont && autoLaptop.button >= 44, 'Compact laptop text must retain its font size and controls remain at least 44px.');
+  console.log(`Planner height at 1280x640: classic ${classicLaptop.height.toFixed(0)}px, auto ${autoLaptop.height.toFixed(0)}px.`);
+  if (process.env.WOOPC_SCREENSHOTS) {
+    mkdirSync(process.env.WOOPC_SCREENSHOTS, { recursive: true });
+    await page.locator('.woopc__planner').screenshot({ path: join(process.env.WOOPC_SCREENSHOTS, 'laptop-auto.png') });
+  }
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  const roomy = await plannerMetrics();
+  await render(fixtures.html.classic, 1280, '1140px', 1000, false);
+  await check(JSON.stringify(roomy) === JSON.stringify(await plannerMetrics()), 'A large, tall viewport must retain the spacious planner exactly; resizing must work without JavaScript.');
+  await render(fixtures.html.classic, 1280, '1140px', 1000, false);
+  const classicTall = await plannerMetrics();
+  await page.setViewportSize({ width: 1280, height: 640 });
+  await check(JSON.stringify(classicTall) === JSON.stringify(await plannerMetrics()), 'Classic rollback must ignore the new viewport-height adaptation.');
+
+  for (const [width, height, container] of [[1024, 768, '100%'], [1440, 900, '100%'], [1920, 1080, '100%'], [1280, 1000, '600px'], [320, 640, '100%'], [375, 667, '100%'], [768, 1024, '100%']]) {
+    await render(fixtures.html.first, width, container, height);
+    await check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Auto planner must fit without horizontal overflow at ${width}x${height}, container ${container}.`);
+    for (const color of ['grey', 'wit']) {
+      await page.locator('[data-pick-color="' + color + '"]').first().click();
+      for (let persons = 1; persons <= 12; persons++) {
+        const root = page.locator('.woopc');
+        const current = Number(await root.getAttribute('data-persons'));
+        const name = current > persons ? 'Minder personen' : 'Meer personen';
+        for (let i = 0; i < Math.abs(current - persons); i++) await root.getByRole('button', { name, exact: true }).click();
+        const fits = await root.locator('.woopc__advice').evaluate(el => {
+          const outer = el.getBoundingClientRect();
+          return [...el.querySelectorAll('[data-ref="title"],[data-ref="text"],[data-ref="alt"],[data-ref="ext-link"],[data-ref="total"],[data-ref="cta"]')].filter(node => !node.hidden).every(node => {
+            const rect = node.getBoundingClientRect();
+            return rect.left >= outer.left && rect.right <= outer.right + 1 && rect.bottom <= outer.bottom + 1 && node.scrollWidth <= node.clientWidth + 1;
+          });
+        });
+        await check(fits, `Advice, total and purchase links must remain unclipped for ${color}, ${persons} persons at ${width}x${height}.`);
+      }
+    }
+  }
+
   await render(fixtures.html.first + fixtures.html.second, 1280);
   const first = page.locator('.woopc').nth(0);
   const second = page.locator('.woopc').nth(1);
+  await check(await first.locator('[data-ref="save"]').textContent() === 'Je bespaart €20', 'The planner must display whole-euro savings on initial load.');
   await check(await first.getByRole('table').isVisible(), 'Desktop must show the semantic comparison table.');
   await check(await first.getByRole('columnheader').count() === 6, 'Comparison must expose all six header cells.');
   await check(await first.locator('[data-image-id]:not([hidden])').count() === 1, 'Only the active picture wrapper may be visible.');
@@ -51,6 +102,12 @@ try {
 
   for (const width of [320, 375, 640, 700, 800, 1280]) {
     await render(fixtures.html.first, width);
+    const roundingRoot = page.locator('.woopc');
+    await check(await roundingRoot.locator('[data-col="ext"] [data-ref="badge"]').first().textContent() === '-€6', 'Extension badges must round the fixture saving of 5.50 euros upwards.');
+    await roundingRoot.getByRole('button', { name: 'Minder personen', exact: true }).click();
+    await roundingRoot.getByRole('button', { name: 'Minder personen', exact: true }).click();
+    await roundingRoot.getByRole('button', { name: 'Minder personen', exact: true }).click();
+    await check(await roundingRoot.locator('[data-ref="save"]').textContent() === 'Je bespaart €6', 'After interaction the planner must match the rounded extension badge.');
     const cards = page.locator('.woopc__cards');
     const table = page.locator('.woopc__table-wrap');
     const innerWidth = width - 32;

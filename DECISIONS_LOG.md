@@ -1,5 +1,38 @@
 # Decisions Log - Woo Party Chef
 
+## v1.3.0 (6 October 2026)
+
+### Decision: CSS-only automatic sizing with a per-shortcode rollback
+
+Keep the v1.2.2 planner rules as the classic baseline. A server-rendered
+`data-layout="auto"` enables scoped overrides with viewport-height media queries
+and component-width container queries. Short desktop windows (height <= 850px)
+and medium components (800-1100px) use a 45/55 image/controls split, smaller
+images, 24px control padding, 44px buttons and content-sized advice/legend.
+Below 800px of component width, stack the planner and cap the image at 240px.
+Large, tall screens keep the original dimensions. There is no fixed planner
+height, internal scrolling, truncated advice or changed purchase logic.
+
+`[woo_party_chef layout="classic"]` restores the original planner independently
+per instance, before JavaScript runs. Preserve the v1.2.2 installation ZIP for
+a complete plugin rollback. Neither method requires a database migration. Clear
+the campaign URL cache after changing the shortcode or plugin version.
+
+## v1.2.2 (6 October 2026)
+
+Give "In elke Chef’s Dinner Party" the planner/comparison panel treatment:
+white background, 10px corners, the existing panel shadow and no outlined border.
+Keep its content, padding and responsive feature grid intact.
+
+## v1.2.1 (6 October 2026)
+
+Use Woo Card Chef's whole-euro badge rounding for every displayed euro discount,
+including the planner savings line. The 4-person example (124.99 minus 115.00)
+now shows "Je bespaart €10" alongside "-€10"; the extension example (39.99 minus
+14.00) shows €26 in both places. Current and regular prices retain two decimals.
+Round combined savings after summing their exact amounts. PHP and JavaScript
+share the same formatting contract; percentage badges retain their existing rule.
+
 ## v1.2.0 (2 October 2026)
 
 ### Decision: 12 persons = 8-person set + 4-person set

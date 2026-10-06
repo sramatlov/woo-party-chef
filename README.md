@@ -4,7 +4,7 @@ WordPress plugin for bourgini.com that renders the **Chef's Dinner Party (CDP) v
 
 Built from the Claude Design handoff "CDP Vergelijker" (October 2026). Deliberately a separate plugin, not part of [Woo Card Chef](https://github.com/sramatlov/woo-card-chef); it only borrows Woo Card Chef's PFAS-vrij badge (styling, leaf icon and ACF field).
 
-- **Current version:** 1.2.0
+- **Current version:** 1.3.0
 - **Requires:** WordPress 6.0+, PHP 7.4+, WooCommerce 6.0+
 - **Target stack:** Hello Elementor, Elementor Pro, WooCommerce, WP Rocket (Remove Unused CSS, Delay JS), Imagify, Kinsta
 
@@ -31,7 +31,7 @@ Extra lines: 2-3 persons explain that the smallest set is for 4; 7 persons offer
 
 ## Installation
 
-1. Upload `woo-party-chef-v1.2.0-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
+1. Upload `woo-party-chef-v1.3.0-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
 2. Activate. WooCommerce must be active.
 3. Add an Elementor **Shortcode** widget to the campaign container:
 
@@ -58,6 +58,32 @@ fold, use `[woo_party_chef image_loading="eager"]`; the default `auto` lets
 WordPress choose loading priority. Use `image_loading="lazy"` for a deliberately
 below-fold planner.
 
+## Automatic sizing and rollback
+
+The default shortcode adapts the planner to component width and viewport height.
+Short desktop windows (at most 850 CSS pixels high) and medium containers get
+smaller images, less padding and less reserved empty space. Below 800px of
+component width, the planner stacks with a 240px image cap. Large, tall screens
+keep the spacious layout. Text and prices remain readable, stepper/finish
+controls are at least 44px, and longer advice grows naturally without clipping.
+The full product names, recommendation rules and purchase targets are preserved.
+
+To disable the new planner sizing on one page, change its shortcode to:
+
+```
+[woo_party_chef layout="classic"]
+```
+
+Keep any other existing attributes. Save the page and use WP Rocket's **Purge
+this URL**. This restores the v1.2.2 planner layout while retaining the rounding
+and included-features styling corrections. Automatic sizing returns when
+`layout="classic"` is removed or changed to `layout="auto"`.
+
+For a full plugin rollback, keep `woo-party-chef-v1.2.2-install.zip` and upload
+it through **Plugins > Add Plugin > Upload Plugin**, then choose **Replace
+current with uploaded**. Purge the campaign URL afterwards. There is no database
+migration or new stored setting in this release.
+
 ## Shortcode attributes
 
 | Attribute | Values | Default | Purpose |
@@ -71,6 +97,7 @@ below-fold planner.
 | `standalone` | `yes`, `no` | `no` | Own background and padding (outside a styled container) |
 | `anchor` | HTML id | `kies-jouw-chefs-dinner-party` | Section id for anchor links |
 | `image_grey` / `image_wit` | attachment ID | none | Fallback image for products without a featured image |
+| `layout` | `auto`, `classic` | `auto` | Automatic planner sizing; `classic` restores the previous spacious planner |
 | `image_loading` | `auto`, `eager`, `lazy` | `auto` | Active photo priority; alternate photos are always lazy |
 
 With `show_sale="no"` the actual current price is still shown, only without sale ornaments. The visitor never sees a price higher than what they will pay.
@@ -82,6 +109,11 @@ are unique per shortcode instance. Selection buttons expose `aria-pressed`, and
 changed advice is announced in a polite live region without prices when hidden.
 The desktop comparison exposes table semantics, with each product as one logical
 row for assistive technology while retaining the existing visual columns.
+
+Euro discount badges and the planner savings line use whole-euro rounding,
+following Woo Card Chef euro badges: € 9,99 saved becomes €10 and € 25,99
+becomes €26. Current and regular prices keep two decimals. Combined savings
+are summed before rounding; percentage badges keep their existing format.
 
 ## Live data
 

@@ -32,6 +32,20 @@ foreach ( $catalogue as $color => $config ) {
 $colors = WOOPC_Products::get_colors_data();
 check( 2 === count( $colors ), 'Existing catalogue/recommendation availability must be unchanged.' );
 $settings = array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false );
+$discount_color = $colors['grey'];
+$discount_color['items']['4']['price'] = 115.00;
+$discount_color['items']['4']['regular'] = 124.99;
+$discount_color['items']['ext']['price'] = 14.00;
+$discount_color['items']['ext']['regular'] = 39.99;
+$four_discount = WOOPC_Products::compute_state( $discount_color, 4, $settings );
+$solo_discount = WOOPC_Products::compute_state( $discount_color, 1, $settings );
+check( 'Je bespaart €10' === $four_discount['save'] && '-€10' === $four_discount['cols']['4']['badge'], 'The screenshot four-person saving must match the rounded euro badge.' );
+check( 'Je bespaart €26' === $solo_discount['save'] && '-€26' === $solo_discount['cols']['ext']['badge'], 'The screenshot extension saving must match the rounded euro badge.' );
+check( '€ 115,00' === $four_discount['total'] && '€ 124,99' === $four_discount['total_was'] && '€ 14,00' === $solo_discount['total'] && '€ 39,99' === $solo_discount['total_was'], 'Rounding savings must preserve exact current and reference prices.' );
+check( '€0' === WOOPC_Products::format_discount_eur( 0.49 ) && '€1' === WOOPC_Products::format_discount_eur( 0.50 ) && '€1.235' === WOOPC_Products::format_discount_eur( 1234.50 ), 'Euro discounts round half up and retain Dutch thousands separators like Woo Card Chef.' );
+$combined_color = $discount_color;
+$combined_color['items']['ext']['regular'] = 19.49;
+check( 'Je bespaart €31' === WOOPC_Products::compute_state( $combined_color, 10, $settings )['save'], 'Combined savings must round once after summing the 20.00 and two 5.49 euro discounts.' );
 $eleven = WOOPC_Products::compute_state( $colors['grey'], 11, $settings );
 check( '8' === $eleven['image'] && 'https://example.test/product/9' === $eleven['cta_url'], 'Existing purchase target must be unchanged.' );
 check( 'Voeg 3 uitbreidingssets toe →' === $eleven['ext_label'], 'Extension CTA copy must be unchanged.' );
@@ -50,6 +64,10 @@ $first = WOOPC_Shortcode::render( array( 'image_loading' => 'eager' ) );
 $second = WOOPC_Shortcode::render( array() );
 $hidden = WOOPC_Shortcode::render( array( 'show_prices' => 'no' ) );
 $no_planner = WOOPC_Shortcode::render( array( 'show_planner' => 'no' ) );
+$classic = WOOPC_Shortcode::render( array( 'layout' => 'classic' ) );
+check( false !== strpos( $first, 'data-layout="auto"' ), 'Existing shortcodes must enable automatic planner sizing by default.' );
+check( false !== strpos( $classic, 'data-layout="classic"' ), 'The classic shortcode setting must expose a direct layout rollback.' );
+check( false !== strpos( WOOPC_Shortcode::render( array( 'layout' => 'invalid' ) ), 'data-layout="auto"' ), 'Unknown layout settings must fall back to auto.' );
 check( false !== strpos( $first, 'PFAS-vrije keramische anti-aanbaklaag' ), 'PFAS copy is outside this change.' );
 check( false !== strpos( $first, '>Bekijk deze set</a>' ), 'Visible CTA copy is outside this change.' );
 check( false !== strpos( $first, 'role="table"' ) && false !== strpos( $first, 'role="columnheader"' ), 'Comparison needs table headers.' );
@@ -160,6 +178,16 @@ check( array() === WOOPC_Cache_Purger::get_pages(), 'Non-array page registry mus
 $GLOBALS['test_options'] = $saved_pages;
 
 $states = array();
+$states[] = array( 'color' => $combined_color, 'persons' => 10, 'config' => array( 'showPrices' => true, 'showSale' => true, 'discountPct' => false, 'max' => 12 ), 'expected' => WOOPC_Products::compute_state( $combined_color, 10, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) ) );
+foreach ( array( 4, 1, 10, 12 ) as $discount_persons ) {
+	$states[] = array( 'color' => $discount_color, 'persons' => $discount_persons, 'config' => array( 'showPrices' => true, 'showSale' => true, 'discountPct' => false, 'max' => 12 ), 'expected' => WOOPC_Products::compute_state( $discount_color, $discount_persons, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) ) );
+}
+foreach ( array( 0.49, 0.50, 1234.50 ) as $discount_amount ) {
+	$boundary_color = $discount_color;
+	$boundary_color['items']['4']['price'] = 100.00;
+	$boundary_color['items']['4']['regular'] = 100.00 + $discount_amount;
+	$states[] = array( 'color' => $boundary_color, 'persons' => 4, 'config' => array( 'showPrices' => true, 'showSale' => true, 'discountPct' => false, 'max' => 12 ), 'expected' => WOOPC_Products::compute_state( $boundary_color, 4, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) ) );
+}
 foreach ( $colors as $color ) {
 	for ( $persons = 0; $persons <= 13; ++$persons ) {
 		foreach ( array( false, true ) as $prices ) {
@@ -176,4 +204,4 @@ foreach ( $colors as $color ) {
 		}
 	}
 }
-echo json_encode( array( 'checks' => $checks, 'states' => $states, 'html' => array( 'first' => $first, 'second' => $second, 'hidden' => $hidden, 'noPlanner' => $no_planner ), 'config' => config_from_html( $first ) ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+echo json_encode( array( 'checks' => $checks, 'states' => $states, 'html' => array( 'first' => $first, 'second' => $second, 'hidden' => $hidden, 'noPlanner' => $no_planner, 'classic' => $classic ), 'config' => config_from_html( $first ) ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );

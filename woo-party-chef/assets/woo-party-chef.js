@@ -67,6 +67,11 @@
 		return String( watt ).replace( /\B(?=(\d{3})+(?!\d))/g, '.' ) + ' W';
 	}
 
+	// Match Woo Card Chef's euro badges: round the saving to whole euros.
+	function formatDiscountEur( value ) {
+		return '€' + String( Math.round( Math.max( 0, value ) ) ).replace( /\B(?=(\d{3})+(?!\d))/g, '.' );
+	}
+
 	function pluralExt( count ) {
 		return count === 1 ? '1 uitbreidingsset' : count + ' uitbreidingssets';
 	}
@@ -154,7 +159,7 @@
 				was: cfg.showPrices ? formatEur( item.regular ) : '',
 				badge: ! cfg.showPrices ? '' : ( cfg.discountPct
 					? '-' + Math.round( diff / item.regular * 100 ) + '%'
-					: '-€' + Math.round( diff ) ),
+					: '-' + formatDiscountEur( diff ) ),
 				url: item.url
 			};
 		} );
@@ -172,7 +177,7 @@
 			extUrl: set2 ? items[ set2 ].url : items.ext.url,
 			total: cfg.showPrices ? formatEur( total ) : '',
 			totalWas: cfg.showPrices ? formatEur( totalWas ) : '',
-			save: cfg.showPrices ? 'Je bespaart ' + formatEur( totalWas - total ) : '',
+			save: cfg.showPrices ? 'Je bespaart ' + formatDiscountEur( totalWas - total ) : '',
 			onSale: cfg.showPrices && cfg.showSale && total < totalWas - 0.004,
 			ctaUrl: solo ? items.ext.url : items[ set ].url,
 			image: solo ? 'ext' : String( set ),
