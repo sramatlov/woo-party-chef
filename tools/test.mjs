@@ -38,7 +38,7 @@ for (const test of fixtures.states) {
   const result = normalize(JSON.parse(JSON.stringify(compute(test.color, test.persons, test.config))));
   assert.deepEqual(result, test.expected, `PHP/JS mismatch for ${test.color.label}, ${test.persons} persons, ${JSON.stringify(test.config)}`);
 }
-assert.equal(validConfig(fixtures.config), true);
+assert.equal(validConfig(fixtures.config), true); assert.equal(validConfig(fixtures.deluxeConfig), true);
 const hidden = JSON.parse(fixtures.html.hidden.match(/data-config="([^"]+)"/)[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
 assert.equal(validConfig(hidden), true);
 // The person limit is server-defined; another valid limit must not disable the planner.

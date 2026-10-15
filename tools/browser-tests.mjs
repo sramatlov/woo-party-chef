@@ -158,6 +158,40 @@ try {
     await check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Centred Elementor must not overflow at ${viewport}px.`);
   }
 
+  // Deluxe opt-in: first and selected; finish switches swap power, copy and feature box.
+  for (const width of [1280, 375]) {
+    await render(fixtures.html.deluxe, width);
+    const dx = page.locator('.woopc');
+    const visibleFeatures = () => dx.locator('.woopc__features:not([hidden]) .woopc__features-title').textContent();
+    await check(await dx.getAttribute('data-color') === 'deluxe' && await visibleFeatures() === 'In elke Chef’s Dinner Party Deluxe', `Deluxe must be selected with its own feature box at ${width}px.`);
+    await check((await dx.locator('[data-ref="text"]').textContent()).startsWith('4 kookstations van 480 W'), `Deluxe advice must use 480 W at ${width}px.`);
+    const pointsText = () => dx.locator('[data-ref="points"] li').allTextContents();
+    await check(JSON.stringify(await pointsText()) === JSON.stringify(['Punt deluxe 4 & meer', 'Uitbreidbaar met stations']) && await dx.locator('[data-ref="points"]').isVisible(), `The Deluxe photo must show its product bullets at ${width}px.`);
+    await dx.getByRole('button', { name: 'Kies de set voor 6 personen', exact: true }).click();
+    await check(!(await dx.locator('[data-ref="points"]').isVisible()) && await dx.locator('.woopc__media').getAttribute('data-points') === 'false', `A product without a list must hide the bullets at ${width}px.`);
+    await dx.getByRole('button', { name: 'Kies de set voor 4 personen', exact: true }).click();
+    await dx.locator('[data-pick-color="wit"]').first().click();
+    await check(JSON.stringify(await pointsText()) === JSON.stringify(['Punt wit 4 & meer', 'Uitbreidbaar met stations']), `Switching to Wit must show the Wit product bullets at ${width}px.`);
+    await check(await visibleFeatures() === 'In elke Chef’s Dinner Party' && await dx.locator('.woopc__features:not([hidden])').count() === 1, `Switching to Wit must show the standard feature box at ${width}px.`);
+    await check(await dx.locator('[data-col="8"] [data-ref="watt"]').textContent() === '2.000 W' && await dx.locator('[data-col="ext"] [data-ref="meta"]').textContent() === '1 station · 250 W', `Comparison power must follow Wit at ${width}px.`);
+    await dx.locator('[data-pick-color="deluxe"]').first().click();
+    await check(await dx.locator('[data-col="8"] [data-ref="watt"]').textContent() === '3.840 W' && await visibleFeatures() === 'In elke Chef’s Dinner Party Deluxe', `Switching back must restore Deluxe at ${width}px.`);
+    await check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Deluxe must not overflow at ${width}px.`);
+  }
+
+  // The photo gives about a quarter of its size to the list on desktop, not on phones.
+  for (const [width, height, ratio] of [[1440, 1000, 0.75], [1280, 640, 0.75], [1024, 768, 0.75], [375, 667, 1]]) {
+    const photoWidth = async html => { await render(html, width, '100%', height); return page.locator('.woopc__image:not([hidden]) img').evaluate(el => el.getBoundingClientRect().width); };
+    const plain = await photoWidth(fixtures.html.first);
+    const withPoints = await photoWidth(fixtures.html.deluxe);
+    await check(Math.abs(withPoints / plain - ratio) < 0.03, `The photo must be ${ratio * 100}% of its size with the list at ${width}x${height} (got ${withPoints.toFixed(0)} / ${plain.toFixed(0)}px).`);
+    const listFits = await page.locator('.woopc__media').evaluate(el => {
+      const outer = el.getBoundingClientRect();
+      return [...el.querySelectorAll('.woopc__point')].every(li => { const r = li.getBoundingClientRect(); return r.left >= outer.left && r.right <= outer.right + 1 && r.bottom <= outer.bottom + 1; });
+    });
+    await check(listFits, `The bullet list must fit inside the photo column at ${width}x${height}.`);
+  }
+
   await render(fixtures.html.hidden, 375);
   await page.getByRole('button', { name: 'Meer personen', exact: true }).click();
   await check(await page.locator('.woopc').getAttribute('data-persons') === '5', 'The planner must work without price fields.');

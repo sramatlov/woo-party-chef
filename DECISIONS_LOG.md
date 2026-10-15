@@ -1,5 +1,31 @@
 # Decisions Log - Woo Party Chef
 
+## v1.4.0 (15 October 2026)
+
+### Decision: Deluxe as a third finish behind a per-shortcode switch
+**Chose:** Deluxe is a third `uitvoering` (Deluxe · Wit · Glazed Grey), enabled
+with `deluxe="yes"`. When enabled it is first and selected by default.
+**Rejected:** a separate line selector (extra step, more design work); a global
+admin setting (no way to test alongside the unchanged live page).
+**Why:** the standard line must keep running unchanged for a while; a shortcode
+switch allows a hidden test page and a one-line switch/rollback per page.
+
+Per-line data lives in the catalogue (`line`, `watt`, `kit`): Deluxe stations are
+480 W with bord, bakplaat and two pannetjes. Advice copy, comparison power and
+the feature box follow the selected line; PHP and JS stay in parity. Deluxe is
+an optional color: missing Deluxe products (production today) do not shorten the
+12-hour ID cache. The color picker is now a wrapping flex row so three finishes
+fit on one line on desktop; two finishes look identical to v1.3.0.
+
+### Decision: product short description under the photo, not extra advice copy
+**Chose:** "Ons advies" keeps its original copy. With Deluxe offered, the photo
+column shows the `<li>` bullets of the recommended product's WooCommerce short
+description (extension set for 1 person, 8-person set for 9-12), read live like
+prices. The photo wrapper shrinks to 75% on desktop (scale 1 on phones, where
+the planner stacks). Without bullets the photo keeps its full size.
+**Rejected:** hand-written version explanations in the advice box (briefly built,
+then reverted): product copy belongs in WooCommerce, where marketing edits it.
+
 ## v1.3.0 (6 October 2026)
 
 ### Decision: CSS-only automatic sizing with a per-shortcode rollback

@@ -119,6 +119,55 @@
 	object-fit: contain;
 }
 
+/* Deluxe opt-in: product bullets under a ~25% smaller photo. */
+.woopc .woopc__media[data-points="true"] {
+	flex-direction: column;
+	gap: 20px;
+}
+
+.woopc .woopc__media[data-points="true"] .woopc__image {
+	max-width: calc(min(520px, 62vw) * var(--woopc-media-scale, 0.75));
+}
+
+/* Scale the wrapper only; the image and Imagify's <picture> fill it. */
+.woopc[data-layout] .woopc__media[data-points="true"] .woopc__img,
+.woopc[data-layout] .woopc__media[data-points="true"] picture {
+	max-width: 100%;
+}
+
+.woopc .woopc__points {
+	width: 100%;
+	max-width: 420px;
+	margin: 0;
+	padding: 0 0 0 1.2em;
+	list-style: disc;
+	font-family: var(--woopc-body);
+	font-size: 15px;
+	line-height: 1.45;
+	color: var(--woopc-text);
+	text-align: left;
+}
+
+.woopc .woopc__point {
+	margin: 0 0 6px;
+	padding: 0;
+}
+
+.woopc .woopc__point:last-child {
+	margin-bottom: 0;
+}
+
+.woopc .woopc__point::marker {
+	color: var(--woopc-red);
+}
+
+/* Phones stack the planner; the photo is already small there. */
+@media (max-width: 759px) {
+	.woopc .woopc__media[data-points="true"] {
+		--woopc-media-scale: 1;
+	}
+}
+
 /* PFAS-vrij badge: identical to Woo Card Chef's .wcpce-gallery__badge--pfas. */
 .woopc .woopc__pfas {
 	position: absolute;
@@ -176,8 +225,8 @@
 /* Color pills */
 
 .woopc .woopc__colors {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, max-content));
+	display: flex;
+	flex-wrap: wrap;
 	gap: 10px;
 }
 
@@ -1101,6 +1150,10 @@
 	max-width: var(--woopc-planner-image, min(520px, 62vw));
 }
 
+.woopc[data-layout="auto"] .woopc__media[data-points="true"] .woopc__image {
+	max-width: calc(var(--woopc-planner-image, min(520px, 62vw)) * var(--woopc-media-scale, 0.75));
+}
+
 .woopc[data-layout="auto"] .woopc__controls {
 	padding: var(--woopc-planner-padding, clamp(18px, 4vw, 48px));
 	gap: var(--woopc-planner-gap, clamp(22px, 3vw, 28px));
@@ -1192,6 +1245,7 @@
 	.woopc[data-layout="auto"] {
 		--woopc-planner-columns: minmax(0, 1fr);
 		--woopc-planner-image: min(100%, 240px);
+		--woopc-media-scale: 1;
 		--woopc-planner-media-padding: 16px;
 		--woopc-planner-padding: 22px;
 		--woopc-planner-gap: 18px;
@@ -1211,6 +1265,7 @@
 	.woopc[data-layout="auto"] .woopc__planner {
 		--woopc-planner-columns: minmax(0, 1fr);
 		--woopc-planner-image: min(100%, 240px);
+		--woopc-media-scale: 1;
 		--woopc-planner-media-padding: 16px;
 		--woopc-planner-padding: 22px;
 		--woopc-planner-gap: 18px;
