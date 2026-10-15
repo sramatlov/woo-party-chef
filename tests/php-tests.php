@@ -81,6 +81,10 @@ check( false !== strpos( $with_deluxe, 'data-color="deluxe"' ) && false !== strp
 check( false !== strpos( $deluxe_wit, 'data-color="wit"' ), 'An explicit default_color still wins over the Deluxe default.' );
 check( false !== strpos( $with_deluxe, '<div class="woopc__features" data-line="deluxe">' ) && false !== strpos( $with_deluxe, '<div class="woopc__features" data-line="standard" hidden>' ), 'The Deluxe feature box is visible and the standard box hidden while Deluxe is selected.' );
 check( false !== strpos( $with_deluxe, 'In elke Chef’s Dinner Party Deluxe' ) && false !== strpos( $with_deluxe, 'Draaibare serveerschaal' ), 'Deluxe has its own feature copy.' );
+check( false !== strpos( $first, '<span class="woopc__intro" data-ref="intro" hidden></span>' ) && false === strpos( $first, 'klassieke Chef’s Dinner Party' ), 'Without Deluxe the advice box shows no version explanation.' );
+foreach ( config_from_html( $first )['colors'] as $color ) { check( '' === $color['intro'], 'Without Deluxe no version explanation reaches the browser.' ); }
+check( 1 === preg_match( '/<span class="woopc__intro" data-ref="intro">Grillen én gourmetten tegelijk/', $with_deluxe ), 'The Deluxe advice explains grilling and gourmetting.' );
+check( false !== strpos( $deluxe_wit, '<span class="woopc__intro" data-ref="intro">De klassieke Chef’s Dinner Party in fris wit.' ), 'With Deluxe offered, Wit explains the classic version.' );
 check( false !== strpos( $with_deluxe, 'data-ref="watt">3.840 W<' ) && false !== strpos( $deluxe_wit, 'data-ref="watt">2.000 W<' ), 'Comparison power follows the selected line.' );
 check( false !== strpos( $first, 'data-layout="auto"' ), 'Existing shortcodes must enable automatic planner sizing by default.' );
 check( false !== strpos( $classic, 'data-layout="classic"' ), 'The classic shortcode setting must expose a direct layout rollback.' );

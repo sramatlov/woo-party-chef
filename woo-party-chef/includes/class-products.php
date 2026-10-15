@@ -70,6 +70,7 @@ class WOOPC_Products {
 				'line'     => 'standard',
 				'watt'     => self::WATT_PER_STATION,
 				'kit'      => self::DEFAULT_KIT,
+				'intro'    => 'De klassieke Chef’s Dinner Party in fris wit. Iedereen grilt op een eigen bakplaat en eet van een eigen keramisch bord.',
 				'products' => array(
 					'4'   => array( 'sku' => '16.4005.00.00', 'slug' => 'chefs-dinner-party-gourmetstel' ),
 					'5'   => array( 'sku' => '16.4006.00.00', 'slug' => 'chefs-dinner-party-gourmetstel-5-personen' ),
@@ -85,6 +86,7 @@ class WOOPC_Products {
 				'line'     => 'standard',
 				'watt'     => self::WATT_PER_STATION,
 				'kit'      => self::DEFAULT_KIT,
+				'intro'    => 'De klassieke Chef’s Dinner Party in stijlvol Glazed Grey. Iedereen grilt op een eigen bakplaat en eet van een eigen keramisch bord.',
 				'products' => array(
 					'4'   => array( 'sku' => '16.4045.00.00', 'slug' => 'chefs-dinner-party-glazed-grey-gourmetstel' ),
 					'5'   => array( 'sku' => '16.4046.00.00', 'slug' => 'chefs-dinner-party-gourmetstel-glazed-grey-5-personen-pfas-vrij' ),
@@ -100,6 +102,7 @@ class WOOPC_Products {
 				'line'     => 'deluxe',
 				'watt'     => 480,
 				'kit'      => 'bord, bakplaat en twee pannetjes',
+				'intro'    => 'Grillen én gourmetten tegelijk: iedereen grilt op een eigen bakplaat en bereidt in twee pannetjes eronder iets anders, zoals gegratineerde groenten of raclette. In het midden staat een draaibare serveerschaal met 3 vakken en een sausbakje.',
 				'products' => array(
 					'4'   => array( 'sku' => '16.4055.00.00', 'slug' => 'chefs-dinner-party-deluxe-gourmetstel-wit-4-personen' ),
 					'5'   => array( 'sku' => '16.4056.00.00', 'slug' => 'chefs-dinner-party-deluxe-gourmetstel-5-personen-pfas-vrij' ),
@@ -150,6 +153,7 @@ class WOOPC_Products {
 				'swatch'   => is_string( $config['swatch'] ?? null ) ? ( sanitize_hex_color( $config['swatch'] ) ?: '#FFFFFF' ) : '#FFFFFF',
 				'line'     => 'deluxe' === ( $config['line'] ?? null ) ? 'deluxe' : 'standard',
 				'watt'     => is_int( $config['watt'] ?? null ) && $config['watt'] > 0 && $config['watt'] <= 10000 ? $config['watt'] : self::WATT_PER_STATION,
+				'intro'    => is_string( $config['intro'] ?? null ) ? sanitize_text_field( $config['intro'] ) : '',
 				'kit'      => is_string( $config['kit'] ?? null ) && '' !== sanitize_text_field( $config['kit'] ) ? sanitize_text_field( $config['kit'] ) : self::DEFAULT_KIT,
 				'products' => $products,
 			);
@@ -330,6 +334,7 @@ class WOOPC_Products {
 				'line'   => (string) $config['line'],
 				'watt'   => (int) $config['watt'],
 				'kit'    => (string) $config['kit'],
+				'intro'  => (string) $config['intro'],
 				'items'  => $items,
 			);
 		}
@@ -487,6 +492,8 @@ class WOOPC_Products {
 		return array(
 			'n'         => $n,
 			'title'     => $title,
+			// Explanation of the chosen version; empty unless the shortcode offers Deluxe.
+			'intro'     => (string) ( $color['intro'] ?? '' ),
 			'text'      => $text,
 			'alt'       => $alt,
 			'dots'      => $dots,

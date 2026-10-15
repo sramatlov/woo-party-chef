@@ -51,6 +51,7 @@
 				( color.watt === undefined || ( Number.isSafeInteger( color.watt ) && color.watt > 0 ) ) &&
 				( color.kit === undefined || ( typeof color.kit === 'string' && color.kit !== '' ) ) &&
 				( color.line === undefined || color.line === 'standard' || color.line === 'deluxe' ) &&
+				( color.intro === undefined || typeof color.intro === 'string' ) &&
 				COLS.every( function ( col ) {
 					var item = color.items[ col ];
 					return isObject( item ) && validUrl( item.url ) && Number.isSafeInteger( item.image ) && item.image >= 0 &&
@@ -174,6 +175,7 @@
 		return {
 			n: n,
 			title: title,
+			intro: color.intro || '',
 			text: text,
 			alt: alt,
 			dots: dots,
@@ -283,6 +285,9 @@
 			show( ref( 'legend-spare' ), s.hasSpare );
 
 			setText( ref( 'title' ), s.title );
+			var intro = ref( 'intro' );
+			setText( intro, s.intro );
+			show( intro, s.intro !== '' );
 			setText( ref( 'text' ), s.text );
 			var alt = ref( 'alt' );
 			setText( alt, s.alt );
@@ -341,7 +346,7 @@
 				setHref( ref( 'url', el ), col.url );
 			} );
 			if ( announce ) {
-				setText( ref( 'status' ), color.label + ', ' + s.n + ' personen. ' + s.title + '. ' + s.text +
+				setText( ref( 'status' ), color.label + ', ' + s.n + ' personen. ' + s.title + '. ' + ( s.intro ? s.intro + ' ' : '' ) + s.text +
 					( cfg.showPrices ? ' Totaal ' + s.total + '.' : '' ) );
 			}
 		}
