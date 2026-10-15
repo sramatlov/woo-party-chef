@@ -86,7 +86,7 @@ function do_action( $tag, ...$args ) {
 function did_action( $tag ) { return 'wp_head' === $tag ? (int) $GLOBALS['test_head'] : ( $GLOBALS['test_actions'][$tag] ?? 0 ); }
 function add_shortcode( $tag, $callback ) {}
 function get_transient( $key ) { return $GLOBALS['test_transients'][$key] ?? false; }
-function set_transient( $key, $value, $ttl ) { $GLOBALS['test_transients'][$key] = $value; }
+function set_transient( $key, $value, $ttl ) { $GLOBALS['test_transients'][$key] = $value; $GLOBALS['test_transient_ttl'][$key] = $ttl; }
 function delete_transient( $key ) { unset( $GLOBALS['test_transients'][$key] ); }
 function get_option( $key, $default = false ) { return $GLOBALS['test_options'][$key] ?? $default; }
 function add_option( $key, $value, $unused = '', $autoload = false ) { $GLOBALS['test_options'][$key] = $value; }

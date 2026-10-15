@@ -176,8 +176,8 @@
 /* Color pills */
 
 .woopc .woopc__colors {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, max-content));
+	display: flex;
+	flex-wrap: wrap;
 	gap: 10px;
 }
 

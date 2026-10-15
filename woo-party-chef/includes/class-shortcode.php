@@ -9,9 +9,11 @@
  * Usage:
  *   [woo_party_chef]
  *   [woo_party_chef default_color="wit" persons="6" discount="percentage"]
+ *   [woo_party_chef deluxe="yes"]
  *
  * Attributes:
- *   default_color  grey|wit                 Default: grey
+ *   deluxe         yes|no                   Default: no  (adds the Deluxe line, shown first and selected)
+ *   default_color  deluxe|grey|wit          Default: grey, or deluxe when deluxe="yes"
  *   persons        1-12                     Default: 4
  *   show_planner   yes|no                   Default: yes
  *   show_prices    yes|no                   Default: yes
@@ -21,6 +23,7 @@
  *   anchor         HTML id                  Default: kies-jouw-chefs-dinner-party
  *   image_grey     attachment ID            Fallback for Grey products without a featured image
  *   image_wit      attachment ID            Fallback for Wit products without a featured image
+ *   image_deluxe   attachment ID            Fallback for Deluxe products without a featured image
  *   image_loading  auto|eager|lazy          WordPress default; eager for an above-fold planner
  *   layout         auto|classic            Default: auto; classic restores the spacious planner
  *
@@ -55,14 +58,38 @@ class WOOPC_Shortcode {
 		'ext' => array( 'big' => '+1', 'unit' => 'extra station', 'stations' => 1, 'ideal' => 'Bestaande set uitbreiden' ),
 	);
 
+	/**
+	 * "In elke ..." feature box per product line.
+	 */
 	const FEATURES = array(
-		'Eigen kookstation met keramisch bord en bakplaat per persoon',
-		'PFAS-vrije keramische anti-aanbaklaag',
-		'Borden en bakplaten zijn vaatwasserbestendig',
-		'Aan-uitschakelaar en powerlampje per station',
-		'250 W per station, snel op temperatuur',
-		'Uit te breiden met losse kookstations',
+		'standard' => array(
+			'title' => 'In elke Chef’s Dinner Party',
+			'items' => array(
+				'Eigen kookstation met keramisch bord en bakplaat per persoon',
+				'PFAS-vrije keramische anti-aanbaklaag',
+				'Borden en bakplaten zijn vaatwasserbestendig',
+				'Aan-uitschakelaar en powerlampje per station',
+				'250 W per station, snel op temperatuur',
+				'Uit te breiden met losse kookstations',
+			),
+		),
+		'deluxe'   => array(
+			'title' => 'In elke Chef’s Dinner Party Deluxe',
+			'items' => array(
+				'Eigen kookstation met keramisch bord, bakplaat en twee pannetjes',
+				'Tegelijk grillen op de bakplaat en gourmetten in de pannetjes',
+				'PFAS-vrije keramische anti-aanbaklaag op alle kookoppervlakken',
+				'Draaibare serveerschaal met 3 vakken en afneembaar sausbakje',
+				'Borden, bakplaten en pannetjes zijn vaatwasserbestendig',
+				'480 W per station, met aan-uitschakelaar en powerlampje',
+			),
+		),
 	);
+
+	/**
+	 * Fixed button order: Deluxe (when enabled) first, then the design's Wit, Grey.
+	 */
+	const COLOR_ORDER = array( 'deluxe', 'wit', 'grey' );
 
 	/**
 	 * Leaf icon path, identical to Woo Card Chef's PFAS-vrij badge icon.
@@ -155,7 +182,9 @@ class WOOPC_Shortcode {
 	 * @return string
 	 */
 	public static function render( $atts ): string {
-		$defaults = array(
+		$explicit_color = is_array( $atts ) && isset( $atts['default_color'] ) && is_scalar( $atts['default_color'] ) && '' !== (string) $atts['default_color'];
+		$defaults       = array(
+			'deluxe'        => 'no',
 			'default_color' => 'grey',
 			'persons'       => 4,
 			'show_planner'  => 'yes',
@@ -166,6 +195,7 @@ class WOOPC_Shortcode {
 			'anchor'        => 'kies-jouw-chefs-dinner-party',
 			'image_grey'    => 0,
 			'image_wit'     => 0,
+			'image_deluxe'  => 0,
 			'image_loading' => 'auto',
 			'layout'        => 'auto',
 		);
@@ -179,10 +209,18 @@ class WOOPC_Shortcode {
 
 		$colors = WOOPC_Products::get_colors_data(
 			array(
-				'grey' => absint( $atts['image_grey'] ),
-				'wit'  => absint( $atts['image_wit'] ),
+				'grey'   => absint( $atts['image_grey'] ),
+				'wit'    => absint( $atts['image_wit'] ),
+				'deluxe' => absint( $atts['image_deluxe'] ),
 			)
 		);
+		// Optional lines (Deluxe) only appear on shortcodes that opt in.
+		$deluxe = self::is_yes( $atts['deluxe'] );
+		if ( ! $deluxe ) {
+			$colors = array_diff_key( $colors, array_flip( WOOPC_Products::OPTIONAL_COLORS ) );
+		}
+		// Fixed button order; the first available color is the fallback default.
+		$colors = array_replace( array_intersect_key( array_flip( self::COLOR_ORDER ), $colors ), $colors );
 
 		if ( empty( $colors ) ) {
 			// Never show visitors made-up prices. Editors get a hint.
@@ -202,6 +240,9 @@ class WOOPC_Shortcode {
 		$layout   = 'classic' === sanitize_key( $atts['layout'] ) ? 'classic' : 'auto';
 
 		$color_key = sanitize_key( $atts['default_color'] );
+		if ( $deluxe && ! $explicit_color && isset( $colors['deluxe'] ) ) {
+			$color_key = 'deluxe';
+		}
 		if ( ! isset( $colors[ $color_key ] ) ) {
 			$color_key = (string) array_key_first( $colors );
 		}
@@ -222,6 +263,9 @@ class WOOPC_Shortcode {
 					return array(
 						'label' => $color['label'],
 						'name'  => $color['name'],
+						'line'  => $color['line'],
+						'watt'  => $color['watt'],
+						'kit'   => $color['kit'],
 						'items' => $items,
 					);
 				},
@@ -248,7 +292,7 @@ class WOOPC_Shortcode {
 					self::render_planner( $colors, $color_key, $state, $settings, $instance_id );
 				}
 				self::render_compare( $colors, $color_key, $state, $settings, $instance_id );
-				self::render_features();
+				self::render_features( $colors, $color_key );
 				?>
 			</div>
 		</section>
@@ -424,7 +468,7 @@ class WOOPC_Shortcode {
 							</div>
 							<div class="woopc__cell woopc__cell--ideal" role="cell"><?php echo esc_html( $column['ideal'] ); ?></div>
 							<div class="woopc__cell woopc__cell--stations" role="cell"><?php echo esc_html( self::stations_label( $column['stations'] ) ); ?></div>
-							<div class="woopc__cell woopc__cell--watt" role="cell"><?php echo esc_html( WOOPC_Products::format_watt( $column['stations'] * WOOPC_Products::WATT_PER_STATION ) ); ?></div>
+							<div class="woopc__cell woopc__cell--watt" role="cell" data-ref="watt"><?php echo esc_html( WOOPC_Products::format_watt( $column['stations'] * $colors[ $color_key ]['watt'] ) ); ?></div>
 							<?php if ( $show_prices ) : ?>
 								<div class="woopc__cell woopc__cell--price" role="cell">
 									<s class="woopc__col-was" data-ref="was"<?php echo $col['sale'] ? '' : ' hidden'; ?>><?php echo esc_html( $col['was'] ); ?></s>
@@ -449,7 +493,7 @@ class WOOPC_Shortcode {
 						</button>
 						<div class="woopc__card-info">
 							<span class="woopc__card-ideal"><?php echo esc_html( $column['ideal'] ); ?></span>
-							<span class="woopc__card-meta"><?php echo esc_html( self::stations_label( $column['stations'] ) . ' · ' . WOOPC_Products::format_watt( $column['stations'] * WOOPC_Products::WATT_PER_STATION ) ); ?></span>
+							<span class="woopc__card-meta" data-ref="meta"><?php echo esc_html( self::stations_label( $column['stations'] ) . ' · ' . WOOPC_Products::format_watt( $column['stations'] * $colors[ $color_key ]['watt'] ) ); ?></span>
 							<span class="woopc__chosen woopc__chosen--card">Jouw keuze</span>
 						</div>
 						<div class="woopc__card-buy">
@@ -470,14 +514,34 @@ class WOOPC_Shortcode {
 	}
 
 	/**
-	 * "In elke Chef's Dinner Party" feature box.
+	 * "In elke Chef's Dinner Party" feature box, one per offered product line.
+	 * Only the active line's box is visible; the script swaps them.
+	 *
+	 * @param array  $colors    Colors data.
+	 * @param string $color_key Active color.
 	 */
-	private static function render_features(): void {
+	private static function render_features( array $colors, string $color_key ): void {
+		$lines = array_unique( array_column( $colors, 'line' ) );
+		foreach ( self::FEATURES as $line => $features ) {
+			if ( in_array( $line, $lines, true ) ) {
+				self::render_feature_box( $line, $features, $line === $colors[ $color_key ]['line'] );
+			}
+		}
+	}
+
+	/**
+	 * One feature box.
+	 *
+	 * @param string $line     Product line.
+	 * @param array  $features Title and items.
+	 * @param bool   $visible  Whether the box belongs to the active color.
+	 */
+	private static function render_feature_box( string $line, array $features, bool $visible ): void {
 		?>
-		<div class="woopc__features">
-			<h3 class="woopc__features-title">In elke Chef’s Dinner Party</h3>
+		<div class="woopc__features" data-line="<?php echo esc_attr( $line ); ?>"<?php echo $visible ? '' : ' hidden'; ?>>
+			<h3 class="woopc__features-title"><?php echo esc_html( $features['title'] ); ?></h3>
 			<ul class="woopc__feature-list">
-				<?php foreach ( self::FEATURES as $feature ) : ?>
+				<?php foreach ( $features['items'] as $feature ) : ?>
 					<li class="woopc__feature"><span class="woopc__check" aria-hidden="true">✓</span><span><?php echo esc_html( $feature ); ?></span></li>
 				<?php endforeach; ?>
 			</ul>
@@ -493,12 +557,8 @@ class WOOPC_Shortcode {
 	 * @param bool   $small     Small variant (comparison heading).
 	 */
 	private static function render_color_buttons( array $colors, string $color_key, bool $small ): void {
-		// Fixed order from the design: Wit first.
-		$order = array_unique( array_merge( array( 'wit', 'grey' ), array_keys( $colors ) ) );
-		foreach ( $order as $key ) {
-			if ( ! isset( $colors[ $key ] ) ) {
-				continue;
-			}
+		// $colors is already in COLOR_ORDER: Deluxe (when enabled), Wit, Grey.
+		foreach ( array_keys( $colors ) as $key ) {
 			printf(
 				'<button type="button" class="woopc__color%1$s" data-pick-color="%2$s" aria-pressed="%3$s"><span class="woopc__swatch" style="background:%4$s"></span>%5$s</button>',
 				$small ? ' woopc__color--small' : '',

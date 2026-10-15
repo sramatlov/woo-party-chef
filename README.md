@@ -4,13 +4,13 @@ WordPress plugin for bourgini.com that renders the **Chef's Dinner Party (CDP) v
 
 Built from the Claude Design handoff "CDP Vergelijker" (October 2026). Deliberately a separate plugin, not part of [Woo Card Chef](https://github.com/sramatlov/woo-card-chef); it only borrows Woo Card Chef's PFAS-vrij badge (styling, leaf icon and ACF field).
 
-- **Current version:** 1.3.0
+- **Current version:** 1.4.0
 - **Requires:** WordPress 6.0+, PHP 7.4+, WooCommerce 6.0+
 - **Target stack:** Hello Elementor, Elementor Pro, WooCommerce, WP Rocket (Remove Unused CSS, Delay JS), Imagify, Kinsta
 
 ## What it does
 
-Visitors pick a finish (Wit / Glazed Grey) and a number of persons (1-12). The section:
+Visitors pick a finish (Wit / Glazed Grey, plus Deluxe when enabled) and a number of persons (1-12). The section:
 
 1. recommends the matching set, plus extension sets for 9-11 persons or a second 4-person set for 12;
 2. shows the total price, struck-through regular total and savings;
@@ -31,7 +31,7 @@ Extra lines: 2-3 persons explain that the smallest set is for 4; 7 persons offer
 
 ## Installation
 
-1. Upload `woo-party-chef-v1.3.0-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
+1. Upload `woo-party-chef-v1.4.0-install.zip` via *Plugins > Add New > Upload*, or copy `woo-party-chef/` to `wp-content/plugins/`.
 2. Activate. WooCommerce must be active.
 3. Add an Elementor **Shortcode** widget to the campaign container:
 
@@ -57,6 +57,25 @@ and versioned assets replace the existing cached page. For a planner above the
 fold, use `[woo_party_chef image_loading="eager"]`; the default `auto` lets
 WordPress choose loading priority. Use `image_loading="lazy"` for a deliberately
 below-fold planner.
+
+## Deluxe line (opt-in)
+
+Version 1.4.0 adds the Chef's Dinner Party Deluxe (SKU 16.4055-16.4058 and
+extension set 16.4065; 480 W per station, two pannetjes per station). It only
+appears on shortcodes that ask for it:
+
+```
+[woo_party_chef deluxe="yes"]
+```
+
+Deluxe is then the first finish button and selected by default (an explicit
+`default_color` still wins). Power figures, advice copy and the feature box
+("In elke Chef's Dinner Party Deluxe") follow the selected finish. Without the
+attribute the planner is exactly the v1.3.0 Wit/Glazed Grey planner, so a
+hidden test page can run with Deluxe while the campaign page stays unchanged.
+To switch the campaign page, add `deluxe="yes"` to its shortcode, save and use
+WP Rocket's **Purge this URL**; remove it again to switch back. If any Deluxe
+product is missing or unpublished, the planner silently shows Wit/Grey only.
 
 ## Automatic sizing and rollback
 

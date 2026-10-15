@@ -1,7 +1,7 @@
 === Woo Party Chef ===
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 
 Chef's Dinner Party set planner and comparison for bourgini.com, with live WooCommerce prices.
@@ -16,7 +16,8 @@ The container provides the section title, intro, width, padding and background.
 
 Attributes (all optional):
 
-* default_color  grey|wit           Default color. Default: grey
+* deluxe         yes|no             Adds the Deluxe line, shown first and selected. Default: no
+* default_color  deluxe|grey|wit    Default color. Default: grey, or deluxe with deluxe="yes"
 * persons        1-12               Default number of persons. Default: 4
 * show_planner   yes|no             Planner card. Default: yes
 * show_prices    yes|no             Prices and totals. Default: yes
@@ -26,6 +27,7 @@ Attributes (all optional):
 * anchor         HTML id            Default: kies-jouw-chefs-dinner-party
 * image_grey     attachment ID      Fallback for Grey products without a featured image
 * image_wit      attachment ID      Fallback for Wit products without a featured image
+* image_deluxe   attachment ID      Fallback for Deluxe products without a featured image
 * layout         auto|classic      Default: auto. Classic restores the previous spacious planner.
 * image_loading  auto|eager|lazy     Auto lets WordPress choose. Use eager for an above-fold planner.
 
@@ -74,6 +76,12 @@ script is excluded from Delay JS, while remaining deferred. Head CSS is
 discovered from normal page content and Elementor data on the first visit.
 
 == Changelog ==
+
+= 1.4.0 =
+* Add the Chef's Dinner Party Deluxe line (480 W per station, two pannetjes per station) behind [woo_party_chef deluxe="yes"].
+* With Deluxe enabled it is the first finish and selected by default; an explicit default_color still wins.
+* Power, advice copy and the "In elke ..." feature box follow the selected line.
+* Without deluxe="yes" the planner is unchanged; missing Deluxe products never shorten the product cache.
 
 = 1.3.0 =
 * Adapt the planner image, spacing and reserved text height to component width and viewport height; preserve readable text and touch-sized controls.

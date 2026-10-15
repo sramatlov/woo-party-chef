@@ -33,9 +33,20 @@ class WOOPC_Products {
 	const SIZES = array( 4, 5, 6, 8 );
 
 	/**
-	 * Power per cooking station in watts.
+	 * Default power per cooking station in watts (standard line).
 	 */
 	const WATT_PER_STATION = 250;
+
+	/**
+	 * Optional colors, only shown when a shortcode opts in (deluxe="yes").
+	 * Missing optional products never shorten the ID cache lifetime.
+	 */
+	const OPTIONAL_COLORS = array( 'deluxe' );
+
+	/**
+	 * Default per-station equipment (standard line), used in advice copy.
+	 */
+	const DEFAULT_KIT = 'bord en bakplaat';
 
 	/**
 	 * Highest selectable number of persons.
@@ -56,6 +67,9 @@ class WOOPC_Products {
 				'label'    => 'Wit',
 				'name'     => 'Chef’s Dinner Party Wit',
 				'swatch'   => '#FFFFFF',
+				'line'     => 'standard',
+				'watt'     => self::WATT_PER_STATION,
+				'kit'      => self::DEFAULT_KIT,
 				'products' => array(
 					'4'   => array( 'sku' => '16.4005.00.00', 'slug' => 'chefs-dinner-party-gourmetstel' ),
 					'5'   => array( 'sku' => '16.4006.00.00', 'slug' => 'chefs-dinner-party-gourmetstel-5-personen' ),
@@ -68,12 +82,30 @@ class WOOPC_Products {
 				'label'    => 'Glazed Grey',
 				'name'     => 'Chef’s Dinner Party Glazed Grey',
 				'swatch'   => '#8a8d90',
+				'line'     => 'standard',
+				'watt'     => self::WATT_PER_STATION,
+				'kit'      => self::DEFAULT_KIT,
 				'products' => array(
 					'4'   => array( 'sku' => '16.4045.00.00', 'slug' => 'chefs-dinner-party-glazed-grey-gourmetstel' ),
 					'5'   => array( 'sku' => '16.4046.00.00', 'slug' => 'chefs-dinner-party-gourmetstel-glazed-grey-5-personen-pfas-vrij' ),
 					'6'   => array( 'sku' => '16.4047.00.00', 'slug' => 'chefs-dinner-party-gourmetstel-glazed-grey-6-personen-pfas-vrij' ),
 					'8'   => array( 'sku' => '16.4048.00.00', 'slug' => 'chefs-dinner-party-gourmetstel-glazed-grey-8-personen-pfas-vrij' ),
 					'ext' => array( 'sku' => '16.4041.00.00', 'slug' => 'chefs-dinner-party-glazed-grey-uitbreidingsset' ),
+				),
+			),
+			'deluxe' => array(
+				'label'    => 'Deluxe',
+				'name'     => 'Chef’s Dinner Party Deluxe',
+				'swatch'   => '#FFFFFF',
+				'line'     => 'deluxe',
+				'watt'     => 480,
+				'kit'      => 'bord, bakplaat en twee pannetjes',
+				'products' => array(
+					'4'   => array( 'sku' => '16.4055.00.00', 'slug' => 'chefs-dinner-party-deluxe-gourmetstel-wit-4-personen' ),
+					'5'   => array( 'sku' => '16.4056.00.00', 'slug' => 'chefs-dinner-party-deluxe-gourmetstel-5-personen-pfas-vrij' ),
+					'6'   => array( 'sku' => '16.4057.00.00', 'slug' => 'chefs-dinner-party-deluxe-gourmetstel-6-personen-pfas-vrij' ),
+					'8'   => array( 'sku' => '16.4058.00.00', 'slug' => 'chefs-dinner-party-deluxe-gourmetstel-8-personen-pfas-vrij' ),
+					'ext' => array( 'sku' => '16.4065.00.00', 'slug' => 'ccc' ),
 				),
 			),
 		);
@@ -116,6 +148,9 @@ class WOOPC_Products {
 				'label'    => $label,
 				'name'     => $name,
 				'swatch'   => is_string( $config['swatch'] ?? null ) ? ( sanitize_hex_color( $config['swatch'] ) ?: '#FFFFFF' ) : '#FFFFFF',
+				'line'     => 'deluxe' === ( $config['line'] ?? null ) ? 'deluxe' : 'standard',
+				'watt'     => is_int( $config['watt'] ?? null ) && $config['watt'] > 0 && $config['watt'] <= 10000 ? $config['watt'] : self::WATT_PER_STATION,
+				'kit'      => is_string( $config['kit'] ?? null ) && '' !== sanitize_text_field( $config['kit'] ) ? sanitize_text_field( $config['kit'] ) : self::DEFAULT_KIT,
 				'products' => $products,
 			);
 		}
@@ -143,7 +178,7 @@ class WOOPC_Products {
 		foreach ( $catalogue as $color => $config ) {
 			foreach ( (array) ( $config['products'] ?? array() ) as $key => $ref ) {
 				$ids[ $color ][ (string) $key ] = self::resolve_product_id( (array) $ref );
-				$complete = $complete && $ids[ $color ][ (string) $key ] > 0;
+				$complete = $complete && ( $ids[ $color ][ (string) $key ] > 0 || in_array( $color, self::OPTIONAL_COLORS, true ) );
 			}
 		}
 
@@ -292,6 +327,9 @@ class WOOPC_Products {
 				'label'  => (string) $config['label'],
 				'name'   => (string) $config['name'],
 				'swatch' => (string) $config['swatch'],
+				'line'   => (string) $config['line'],
+				'watt'   => (int) $config['watt'],
+				'kit'    => (string) $config['kit'],
 				'items'  => $items,
 			);
 		}
@@ -391,20 +429,22 @@ class WOOPC_Products {
 		$total_was = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['regular'] ) + ( $set2 ? $items[ (string) $set2 ]['regular'] : 0.0 ) + $ext * $items['ext']['regular'] : 0.0;
 		$on_sale   = $show_price && $show_sale && $total < $total_was - 0.004;
 		$stations  = $set + $set2 + $ext;
+		$watt      = (int) ( $color['watt'] ?? self::WATT_PER_STATION );
+		$kit       = (string) ( $color['kit'] ?? self::DEFAULT_KIT );
 
 		if ( $solo ) {
 			$title = $color['name'] . ' uitbreidingsset';
-			$text  = 'Eén kookstation van 250 W met eigen keramisch bord en bakplaat. Later uit te breiden tot een complete set.';
+			$text  = 'Eén kookstation van ' . self::format_watt( $watt ) . ' met eigen keramisch ' . $kit . '. Later uit te breiden tot een complete set.';
 		} else {
 			$title = $set2 ? $set . ' personen + ' . $set2 . ' personen' : ( $ext ? $set . ' personen + ' . self::plural_ext( $ext ) : $color['name'] . ' voor ' . $set . ' personen' );
-			$text  = $stations . ' kookstations van 250 W, samen ' . self::format_watt( $stations * self::WATT_PER_STATION ) . '.';
+			$text  = $stations . ' kookstations van ' . self::format_watt( $watt ) . ', samen ' . self::format_watt( $stations * $watt ) . '.';
 			if ( $spare > 0 ) {
 				$text .= ' Je houdt ' . ( 1 === $spare ? 'één plek' : $spare . ' plekken' ) . ' over voor een extra gast.';
 			}
 			if ( $set2 ) {
 				$text .= ' Twee complete sets: één voor ' . $set . ' en één voor ' . $set2 . ' personen.';
 			} elseif ( $ext ) {
-				$text .= ' Elke uitbreidingsset voegt één eigen kookstation met bord en bakplaat toe.';
+				$text .= ' Elke uitbreidingsset voegt één eigen kookstation met ' . $kit . ' toe.';
 			}
 		}
 

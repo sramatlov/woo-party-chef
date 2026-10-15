@@ -30,7 +30,12 @@ foreach ( $catalogue as $color => $config ) {
 	}
 }
 $colors = WOOPC_Products::get_colors_data();
-check( 2 === count( $colors ), 'Existing catalogue/recommendation availability must be unchanged.' );
+check( array( 'wit', 'grey', 'deluxe' ) === array_keys( $colors ), 'The catalogue offers Wit, Grey and the optional Deluxe line.' );
+check( 250 === $colors['grey']['watt'] && 'standard' === $colors['wit']['line'] && 480 === $colors['deluxe']['watt'] && 'deluxe' === $colors['deluxe']['line'], 'Each line carries its own station power.' );
+$deluxe_six = WOOPC_Products::compute_state( $colors['deluxe'], 6, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) );
+check( '6 kookstations van 480 W, samen 2.880 W.' === $deluxe_six['text'] && 'Chef’s Dinner Party Deluxe voor 6 personen' === $deluxe_six['title'], 'Deluxe advice uses 480 W per station.' );
+check( 'Eén kookstation van 480 W met eigen keramisch bord, bakplaat en twee pannetjes. Later uit te breiden tot een complete set.' === WOOPC_Products::compute_state( $colors['deluxe'], 1, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) )['text'], 'Deluxe extension copy names the pannetjes.' );
+check( '9 kookstations van 250 W, samen 2.250 W. Elke uitbreidingsset voegt één eigen kookstation met bord en bakplaat toe.' === WOOPC_Products::compute_state( $colors['grey'], 9, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) )['text'], 'Standard advice copy must be unchanged.' );
 $settings = array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false );
 $discount_color = $colors['grey'];
 $discount_color['items']['4']['price'] = 115.00;
@@ -65,6 +70,18 @@ $second = WOOPC_Shortcode::render( array() );
 $hidden = WOOPC_Shortcode::render( array( 'show_prices' => 'no' ) );
 $no_planner = WOOPC_Shortcode::render( array( 'show_planner' => 'no' ) );
 $classic = WOOPC_Shortcode::render( array( 'layout' => 'classic' ) );
+$with_deluxe = WOOPC_Shortcode::render( array( 'deluxe' => 'yes' ) );
+$deluxe_wit = WOOPC_Shortcode::render( array( 'deluxe' => 'yes', 'default_color' => 'wit' ) );
+check( false === strpos( $first, 'Deluxe' ) && array( 'wit', 'grey' ) === array_keys( config_from_html( $first )['colors'] ), 'Without deluxe="yes" the planner must not mention Deluxe.' );
+check( false !== strpos( $first, 'data-color="grey"' ) && false === strpos( $first, 'data-line="deluxe"' ) && 1 === substr_count( $first, 'class="woopc__features"' ), 'Without Deluxe the default color and single feature box are unchanged.' );
+check( array( 'deluxe', 'wit', 'grey' ) === array_keys( config_from_html( $with_deluxe )['colors'] ), 'deluxe="yes" adds Deluxe as the first color.' );
+preg_match_all( '/data-pick-color="([a-z]+)"/', $with_deluxe, $buttons );
+check( array( 'deluxe', 'wit', 'grey', 'deluxe', 'wit', 'grey' ) === $buttons[1], 'Deluxe buttons come first in both color pickers.' );
+check( false !== strpos( $with_deluxe, 'data-color="deluxe"' ) && false !== strpos( $with_deluxe, 'data-pick-color="deluxe" aria-pressed="true"' ), 'Deluxe is selected by default when enabled.' );
+check( false !== strpos( $deluxe_wit, 'data-color="wit"' ), 'An explicit default_color still wins over the Deluxe default.' );
+check( false !== strpos( $with_deluxe, '<div class="woopc__features" data-line="deluxe">' ) && false !== strpos( $with_deluxe, '<div class="woopc__features" data-line="standard" hidden>' ), 'The Deluxe feature box is visible and the standard box hidden while Deluxe is selected.' );
+check( false !== strpos( $with_deluxe, 'In elke Chef’s Dinner Party Deluxe' ) && false !== strpos( $with_deluxe, 'Draaibare serveerschaal' ), 'Deluxe has its own feature copy.' );
+check( false !== strpos( $with_deluxe, 'data-ref="watt">3.840 W<' ) && false !== strpos( $deluxe_wit, 'data-ref="watt">2.000 W<' ), 'Comparison power follows the selected line.' );
 check( false !== strpos( $first, 'data-layout="auto"' ), 'Existing shortcodes must enable automatic planner sizing by default.' );
 check( false !== strpos( $classic, 'data-layout="classic"' ), 'The classic shortcode setting must expose a direct layout rollback.' );
 check( false !== strpos( WOOPC_Shortcode::render( array( 'layout' => 'invalid' ) ), 'data-layout="auto"' ), 'Unknown layout settings must fall back to auto.' );
@@ -149,17 +166,17 @@ $changed = $catalogue;
 $changed['grey']['products']['4']['sku'] = 'new-reference';
 $changed['grey']['products']['4']['slug'] = 'new-reference';
 add_filter( 'woopc_cdp_catalogue', static function () use ( $changed ) { return $changed; } );
-check( 1 === count( WOOPC_Products::get_colors_data() ), 'Catalogue changes must bypass stale ID caches.' );
+check( 2 === count( WOOPC_Products::get_colors_data() ), 'Catalogue changes must bypass stale ID caches.' );
 unset( $GLOBALS['test_filters']['woopc_cdp_catalogue'] );
 $valid_ids = WOOPC_Products::get_product_ids();
 $GLOBALS['test_transients'][WOOPC_Products::IDS_TRANSIENT]['ids']['grey']['4'] = array( 9 );
 check( $valid_ids === WOOPC_Products::get_product_ids(), 'Corrupted transient IDs must be resolved again.' );
 $GLOBALS['test_products'][1]->price = INF;
-check( 1 === count( WOOPC_Products::get_colors_data() ), 'Non-finite prices must not reach JSON.' );
+check( 2 === count( WOOPC_Products::get_colors_data() ), 'Non-finite prices must not reach JSON.' );
 $GLOBALS['test_products'][1]->price = 0.001;
-check( 1 === count( WOOPC_Products::get_colors_data() ), 'Sub-cent prices rounded to zero must not produce invalid discount calculations.' );
+check( 2 === count( WOOPC_Products::get_colors_data() ), 'Sub-cent prices rounded to zero must not produce invalid discount calculations.' );
 $GLOBALS['test_products'][1]->price = array( 123 );
-check( 1 === count( WOOPC_Products::get_colors_data() ), 'Non-numeric price types must not be silently cast to a price.' );
+check( 2 === count( WOOPC_Products::get_colors_data() ), 'Non-numeric price types must not be silently cast to a price.' );
 $GLOBALS['test_products'][1]->price = 159.95;
 $GLOBALS['test_bad_url'] = true;
 check( array() === WOOPC_Products::get_colors_data(), 'Unsafe product URLs must not reach JavaScript href updates.' );
@@ -176,6 +193,22 @@ check( array( 42 ) === WOOPC_Cache_Purger::get_pages(), 'Malformed page registry
 $GLOBALS['test_options'][WOOPC_Cache_Purger::PAGES_OPTION] = new stdClass();
 check( array() === WOOPC_Cache_Purger::get_pages(), 'Non-array page registry must fail closed.' );
 $GLOBALS['test_options'] = $saved_pages;
+
+// Production has no Deluxe products yet: missing optional products keep the long ID cache.
+$deluxe_ids = array();
+foreach ( $catalogue['deluxe']['products'] as $ref ) {
+	$deluxe_ids[] = $GLOBALS['test_skus'][ $ref['sku'] ];
+	unset( $GLOBALS['test_skus'][ $ref['sku'] ], $GLOBALS['test_slugs'][ $ref['slug'] ] );
+}
+WOOPC_Products::get_product_ids( true );
+check( 12 * HOUR_IN_SECONDS === ( $GLOBALS['test_transient_ttl'][ WOOPC_Products::IDS_TRANSIENT ] ?? null ), 'Missing Deluxe products must not shorten the ID cache.' );
+check( false === strpos( WOOPC_Shortcode::render( array( 'deluxe' => 'yes' ) ), 'data-pick-color="deluxe"' ), 'deluxe="yes" without Deluxe products falls back to the standard lines.' );
+foreach ( $catalogue['deluxe']['products'] as $ref ) {
+	$restored = array_shift( $deluxe_ids );
+	$GLOBALS['test_skus'][ $ref['sku'] ] = $restored;
+	$GLOBALS['test_slugs'][ $ref['slug'] ] = $restored;
+}
+WOOPC_Products::get_product_ids( true );
 
 $states = array();
 $states[] = array( 'color' => $combined_color, 'persons' => 10, 'config' => array( 'showPrices' => true, 'showSale' => true, 'discountPct' => false, 'max' => 12 ), 'expected' => WOOPC_Products::compute_state( $combined_color, 10, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) ) );
@@ -204,4 +237,4 @@ foreach ( $colors as $color ) {
 		}
 	}
 }
-echo json_encode( array( 'checks' => $checks, 'states' => $states, 'html' => array( 'first' => $first, 'second' => $second, 'hidden' => $hidden, 'noPlanner' => $no_planner, 'classic' => $classic ), 'config' => config_from_html( $first ) ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+echo json_encode( array( 'checks' => $checks, 'states' => $states, 'html' => array( 'first' => $first, 'second' => $second, 'hidden' => $hidden, 'noPlanner' => $no_planner, 'classic' => $classic, 'deluxe' => $with_deluxe ), 'config' => config_from_html( $first ), 'deluxeConfig' => config_from_html( $with_deluxe ) ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );

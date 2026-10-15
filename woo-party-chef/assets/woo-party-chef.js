@@ -14,7 +14,9 @@
 
 	var SIZES = [ 4, 5, 6, 8 ];
 	var COLS = [ '4', '5', '6', '8', 'ext' ];
+	// Defaults for the standard line; pages cached before 1.4.0 omit them.
 	var WATT = 250;
+	var KIT = 'bord en bakplaat';
 	var initialized = new WeakSet();
 
 	function isObject( value ) {
@@ -46,6 +48,9 @@
 			return /^[a-z0-9_-]+$/.test( key ) && [ '__proto__', 'constructor', 'prototype' ].indexOf( key ) === -1 &&
 				isObject( color ) && typeof color.label === 'string' && color.label !== '' &&
 				typeof color.name === 'string' && color.name !== '' && isObject( color.items ) &&
+				( color.watt === undefined || ( Number.isSafeInteger( color.watt ) && color.watt > 0 ) ) &&
+				( color.kit === undefined || ( typeof color.kit === 'string' && color.kit !== '' ) ) &&
+				( color.line === undefined || color.line === 'standard' || color.line === 'deluxe' ) &&
 				COLS.every( function ( col ) {
 					var item = color.items[ col ];
 					return isObject( item ) && validUrl( item.url ) && Number.isSafeInteger( item.image ) && item.image >= 0 &&
@@ -111,21 +116,23 @@
 		var total = cfg.showPrices ? ( solo ? 0 : items[ set ].price ) + ( set2 ? items[ set2 ].price : 0 ) + ext * items.ext.price : 0;
 		var totalWas = cfg.showPrices ? ( solo ? 0 : items[ set ].regular ) + ( set2 ? items[ set2 ].regular : 0 ) + ext * items.ext.regular : 0;
 		var stations = set + set2 + ext;
+		var watt = color.watt || WATT;
+		var kit = color.kit || KIT;
 		var title, text;
 
 		if ( solo ) {
 			title = color.name + ' uitbreidingsset';
-			text = 'Eén kookstation van 250 W met eigen keramisch bord en bakplaat. Later uit te breiden tot een complete set.';
+			text = 'Eén kookstation van ' + formatWatt( watt ) + ' met eigen keramisch ' + kit + '. Later uit te breiden tot een complete set.';
 		} else {
 			title = set2 ? set + ' personen + ' + set2 + ' personen' : ( ext ? set + ' personen + ' + pluralExt( ext ) : color.name + ' voor ' + set + ' personen' );
-			text = stations + ' kookstations van 250 W, samen ' + formatWatt( stations * WATT ) + '.';
+			text = stations + ' kookstations van ' + formatWatt( watt ) + ', samen ' + formatWatt( stations * watt ) + '.';
 			if ( spare > 0 ) {
 				text += ' Je houdt ' + ( spare === 1 ? 'één plek' : spare + ' plekken' ) + ' over voor een extra gast.';
 			}
 			if ( set2 ) {
 				text += ' Twee complete sets: één voor ' + set + ' en één voor ' + set2 + ' personen.';
 			} else if ( ext ) {
-				text += ' Elke uitbreidingsset voegt één eigen kookstation met bord en bakplaat toe.';
+				text += ' Elke uitbreidingsset voegt één eigen kookstation met ' + kit + ' toe.';
 			}
 		}
 
@@ -250,6 +257,11 @@
 			show( ref( 'pfas' ), !! shown.pfas );
 			setText( ref( 'color-label' ), '· ' + color.label );
 
+			// Feature box of the active product line (standard or Deluxe).
+			root.querySelectorAll( '.woopc__features[data-line]' ).forEach( function ( box ) {
+				box.hidden = box.getAttribute( 'data-line' ) !== ( color.line || 'standard' );
+			} );
+
 			// Planner (optional).
 			setText( ref( 'n' ), String( s.n ) );
 			var minus = root.querySelector( '[data-step="-1"]' );
@@ -300,6 +312,10 @@
 					return;
 				}
 				el.setAttribute( 'data-active', col.active ? 'true' : 'false' );
+				var stations = el.getAttribute( 'data-col' ) === 'ext' ? 1 : Number( el.getAttribute( 'data-col' ) );
+				var wattText = formatWatt( stations * ( color.watt || WATT ) );
+				setText( ref( 'watt', el ), wattText );
+				setText( ref( 'meta', el ), ( stations === 1 ? '1 station' : stations + ' stations' ) + ' · ' + wattText );
 				var pickButton = el.querySelector( '[data-pick]' );
 				if ( pickButton ) {
 					pickButton.setAttribute( 'aria-pressed', col.active ? 'true' : 'false' );

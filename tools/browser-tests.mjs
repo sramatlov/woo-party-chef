@@ -158,6 +158,21 @@ try {
     await check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Centred Elementor must not overflow at ${viewport}px.`);
   }
 
+  // Deluxe opt-in: first and selected; finish switches swap power, copy and feature box.
+  for (const width of [1280, 375]) {
+    await render(fixtures.html.deluxe, width);
+    const dx = page.locator('.woopc');
+    const visibleFeatures = () => dx.locator('.woopc__features:not([hidden]) .woopc__features-title').textContent();
+    await check(await dx.getAttribute('data-color') === 'deluxe' && await visibleFeatures() === 'In elke Chef’s Dinner Party Deluxe', `Deluxe must be selected with its own feature box at ${width}px.`);
+    await check((await dx.locator('[data-ref="text"]').textContent()).startsWith('4 kookstations van 480 W'), `Deluxe advice must use 480 W at ${width}px.`);
+    await dx.locator('[data-pick-color="wit"]').first().click();
+    await check(await visibleFeatures() === 'In elke Chef’s Dinner Party' && await dx.locator('.woopc__features:not([hidden])').count() === 1, `Switching to Wit must show the standard feature box at ${width}px.`);
+    await check(await dx.locator('[data-col="8"] [data-ref="watt"]').textContent() === '2.000 W' && await dx.locator('[data-col="ext"] [data-ref="meta"]').textContent() === '1 station · 250 W', `Comparison power must follow Wit at ${width}px.`);
+    await dx.locator('[data-pick-color="deluxe"]').first().click();
+    await check(await dx.locator('[data-col="8"] [data-ref="watt"]').textContent() === '3.840 W' && await visibleFeatures() === 'In elke Chef’s Dinner Party Deluxe', `Switching back must restore Deluxe at ${width}px.`);
+    await check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Deluxe must not overflow at ${width}px.`);
+  }
+
   await render(fixtures.html.hidden, 375);
   await page.getByRole('button', { name: 'Meer personen', exact: true }).click();
   await check(await page.locator('.woopc').getAttribute('data-persons') === '5', 'The planner must work without price fields.');
