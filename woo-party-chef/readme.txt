@@ -1,7 +1,7 @@
 === Woo Party Chef ===
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.3.0
 License: GPLv2 or later
 
 Chef's Dinner Party set planner and comparison for bourgini.com, with live WooCommerce prices.
@@ -26,6 +26,7 @@ Attributes (all optional):
 * anchor         HTML id            Default: kies-jouw-chefs-dinner-party
 * image_grey     attachment ID      Fallback for Grey products without a featured image
 * image_wit      attachment ID      Fallback for Wit products without a featured image
+* layout         auto|classic      Default: auto. Classic restores the previous spacious planner.
 * image_loading  auto|eager|lazy     Auto lets WordPress choose. Use eager for an above-fold planner.
 
 With show_prices="no", amounts are omitted from the HTML and browser data.
@@ -73,6 +74,21 @@ script is excluded from Delay JS, while remaining deferred. Head CSS is
 discovered from normal page content and Elementor data on the first visit.
 
 == Changelog ==
+
+= 1.3.0 =
+* Adapt the planner image, spacing and reserved text height to component width and viewport height; preserve readable text and touch-sized controls.
+* Add layout="classic" to restore the previous spacious planner without rolling back price rounding or features-panel styling.
+* Keep all advice visible with natural height, including multi-set combinations; preserve existing recommendations and purchase links.
+* Verify laptop heights, viewport resizing, narrow Elementor containers, mobile and all person counts in both finishes.
+
+= 1.2.2 =
+* Style the included-features panel with the same white background, rounded corners and subtle shadow as the planner and comparison; remove its outlined border.
+
+= 1.2.1 =
+* Round planner savings to whole euros, matching the comparison badges and Woo Card Chef euro badges. Current and regular prices retain two decimals.
+
+= 1.2.0 =
+* Recommend an 8-person set plus a 4-person set for 12 persons instead of an 8-person set plus four extension sets. 9-11 persons are unchanged.
 
 = 1.1.2 =
 * Keep purchase-button and extension-link typography unchanged on hover and keyboard focus when Elementor applies global link fonts.

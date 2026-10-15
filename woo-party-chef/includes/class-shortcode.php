@@ -22,6 +22,7 @@
  *   image_grey     attachment ID            Fallback for Grey products without a featured image
  *   image_wit      attachment ID            Fallback for Wit products without a featured image
  *   image_loading  auto|eager|lazy          WordPress default; eager for an above-fold planner
+ *   layout         auto|classic            Default: auto; classic restores the spacious planner
  *
  * The planner image shows the featured image of the recommended product.
  *
@@ -166,6 +167,7 @@ class WOOPC_Shortcode {
 			'image_grey'    => 0,
 			'image_wit'     => 0,
 			'image_loading' => 'auto',
+			'layout'        => 'auto',
 		);
 		$filtered = shortcode_atts( $defaults, is_array( $atts ) ? $atts : array(), self::TAG );
 		$atts     = is_array( $filtered ) ? array_replace( $defaults, array_intersect_key( $filtered, $defaults ) ) : $defaults;
@@ -197,6 +199,7 @@ class WOOPC_Shortcode {
 			'image_loading' => in_array( $atts['image_loading'], array( 'auto', 'eager', 'lazy' ), true ) ? $atts['image_loading'] : 'auto',
 		);
 		$planner  = self::is_yes( $atts['show_planner'] );
+		$layout   = 'classic' === sanitize_key( $atts['layout'] ) ? 'classic' : 'auto';
 
 		$color_key = sanitize_key( $atts['default_color'] );
 		if ( ! isset( $colors[ $color_key ] ) ) {
@@ -237,7 +240,7 @@ class WOOPC_Shortcode {
 			wp_print_styles( array( self::HANDLE ) );
 		}
 		?>
-		<section class="woopc" id="<?php echo esc_attr( $anchor ); ?>" data-standalone="<?php echo self::is_yes( $atts['standalone'] ) ? 'yes' : 'no'; ?>" data-color="<?php echo esc_attr( $color_key ); ?>" data-persons="<?php echo esc_attr( (string) $state['n'] ); ?>" data-config="<?php echo esc_attr( (string) wp_json_encode( $config ) ); ?>">
+		<section class="woopc" id="<?php echo esc_attr( $anchor ); ?>" data-standalone="<?php echo self::is_yes( $atts['standalone'] ) ? 'yes' : 'no'; ?>" data-layout="<?php echo esc_attr( $layout ); ?>" data-color="<?php echo esc_attr( $color_key ); ?>" data-persons="<?php echo esc_attr( (string) $state['n'] ); ?>" data-config="<?php echo esc_attr( (string) wp_json_encode( $config ) ); ?>">
 			<div class="woopc__sr-only" role="status" aria-live="polite" aria-atomic="true" data-ref="status"></div>
 			<div class="woopc__inner">
 				<?php

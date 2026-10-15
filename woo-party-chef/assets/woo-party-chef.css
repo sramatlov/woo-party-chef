@@ -955,8 +955,9 @@
 	gap: 18px;
 	padding: clamp(22px, 3vw, 32px);
 	border-radius: 10px;
-	background: var(--woopc-cream);
-	border: 1px solid var(--woopc-line-2);
+	background: #FFFFFF;
+	border: 0;
+	box-shadow: var(--woopc-shadow);
 }
 
 .woopc .woopc__features-title {
@@ -1081,5 +1082,146 @@
 
 	.woopc .woopc__cta {
 		flex-basis: 100%;
+	}
+}
+
+/* ===== Automatic planner sizing; layout="classic" uses the original rules above ===== */
+
+.woopc[data-layout="auto"] .woopc__planner {
+	grid-template-columns: var(--woopc-planner-columns, repeat(auto-fit, minmax(min(100%, 380px), 1fr)));
+}
+
+.woopc[data-layout="auto"] .woopc__media {
+	padding: var(--woopc-planner-media-padding, clamp(12px, 3vw, 32px));
+}
+
+.woopc[data-layout="auto"] .woopc__image,
+.woopc[data-layout="auto"] .woopc__img,
+.woopc[data-layout="auto"] .woopc__media picture {
+	max-width: var(--woopc-planner-image, min(520px, 62vw));
+}
+
+.woopc[data-layout="auto"] .woopc__controls {
+	padding: var(--woopc-planner-padding, clamp(18px, 4vw, 48px));
+	gap: var(--woopc-planner-gap, clamp(22px, 3vw, 28px));
+}
+
+.woopc[data-layout="auto"] .woopc__planner .woopc__step {
+	gap: var(--woopc-planner-step-gap, 12px);
+}
+
+.woopc[data-layout="auto"] .woopc__planner .woopc__color {
+	min-height: var(--woopc-planner-button, 48px);
+	padding: 0 var(--woopc-planner-pill-padding, clamp(14px, 3vw, 20px));
+}
+
+.woopc[data-layout="auto"] .woopc__step-btn {
+	width: var(--woopc-planner-button, clamp(44px, 12vw, 52px));
+	height: var(--woopc-planner-button, clamp(44px, 12vw, 52px));
+}
+
+.woopc[data-layout="auto"] .woopc__count-num {
+	font-size: var(--woopc-planner-count, clamp(44px, 14vw, 72px));
+}
+
+.woopc[data-layout="auto"] .woopc__dot {
+	width: var(--woopc-planner-dot, clamp(18px, 5vw, 22px));
+	height: var(--woopc-planner-dot, clamp(18px, 5vw, 22px));
+}
+
+.woopc[data-layout="auto"] .woopc__legend {
+	min-height: var(--woopc-planner-reserved, 44px);
+}
+
+.woopc[data-layout="auto"] .woopc__advice {
+	padding: var(--woopc-planner-advice-padding, clamp(16px, 3vw, 22px));
+	gap: var(--woopc-planner-advice-gap, 16px);
+}
+
+.woopc[data-layout="auto"] .woopc__advice-title {
+	min-height: var(--woopc-planner-reserved, 2.5em);
+	font-size: var(--woopc-planner-title, clamp(20px, 2.2vw, 24px));
+}
+
+.woopc[data-layout="auto"] .woopc__advice-body {
+	min-height: var(--woopc-planner-reserved, 120px);
+}
+
+/* A wide laptop can still have little vertical space, including at browser zoom. */
+@media (max-height: 850px) and (min-width: 800px) {
+	.woopc[data-layout="auto"] {
+		--woopc-planner-columns: minmax(0, 45fr) minmax(0, 55fr);
+		--woopc-planner-image: min(100%, clamp(280px, 44vh, 400px));
+		--woopc-planner-media-padding: 20px;
+		--woopc-planner-padding: 24px;
+		--woopc-planner-gap: 18px;
+		--woopc-planner-step-gap: 8px;
+		--woopc-planner-button: 44px;
+		--woopc-planner-pill-padding: 14px;
+		--woopc-planner-count: 52px;
+		--woopc-planner-dot: 18px;
+		--woopc-planner-reserved: 0px;
+		--woopc-planner-advice-padding: 16px;
+		--woopc-planner-advice-gap: 12px;
+		--woopc-planner-title: 22px;
+	}
+}
+
+/* Component width matters when Elementor places it in a narrow desktop column. */
+@container woopc (min-width: 800px) and (max-width: 1100px) {
+	.woopc[data-layout="auto"] .woopc__planner {
+		--woopc-planner-columns: minmax(0, 45fr) minmax(0, 55fr);
+		--woopc-planner-image: min(100%, 380px);
+		--woopc-planner-media-padding: 20px;
+		--woopc-planner-padding: 24px;
+		--woopc-planner-gap: 18px;
+		--woopc-planner-step-gap: 8px;
+		--woopc-planner-button: 44px;
+		--woopc-planner-pill-padding: 14px;
+		--woopc-planner-count: 52px;
+		--woopc-planner-dot: 18px;
+		--woopc-planner-reserved: 0px;
+		--woopc-planner-advice-padding: 16px;
+		--woopc-planner-advice-gap: 12px;
+		--woopc-planner-title: 22px;
+	}
+}
+
+/* Small viewports also get this layout without container-query support. */
+@media (max-width: 799px) {
+	.woopc[data-layout="auto"] {
+		--woopc-planner-columns: minmax(0, 1fr);
+		--woopc-planner-image: min(100%, 240px);
+		--woopc-planner-media-padding: 16px;
+		--woopc-planner-padding: 22px;
+		--woopc-planner-gap: 18px;
+		--woopc-planner-step-gap: 8px;
+		--woopc-planner-button: 44px;
+		--woopc-planner-pill-padding: 14px;
+		--woopc-planner-count: 48px;
+		--woopc-planner-dot: 18px;
+		--woopc-planner-reserved: 0px;
+		--woopc-planner-advice-padding: 16px;
+		--woopc-planner-advice-gap: 12px;
+		--woopc-planner-title: 20px;
+	}
+}
+
+@container woopc (max-width: 799px) {
+	.woopc[data-layout="auto"] .woopc__planner {
+		--woopc-planner-columns: minmax(0, 1fr);
+		--woopc-planner-image: min(100%, 240px);
+		--woopc-planner-media-padding: 16px;
+		--woopc-planner-padding: 22px;
+		--woopc-planner-gap: 18px;
+		--woopc-planner-step-gap: 8px;
+		--woopc-planner-button: 44px;
+		--woopc-planner-pill-padding: 14px;
+		--woopc-planner-count: 48px;
+		--woopc-planner-dot: 18px;
+		--woopc-planner-reserved: 0px;
+		--woopc-planner-advice-padding: 16px;
+		--woopc-planner-advice-gap: 12px;
+		--woopc-planner-title: 20px;
 	}
 }

@@ -67,6 +67,11 @@
 		return String( watt ).replace( /\B(?=(\d{3})+(?!\d))/g, '.' ) + ' W';
 	}
 
+	// Match Woo Card Chef's euro badges: round the saving to whole euros.
+	function formatDiscountEur( value ) {
+		return '€' + String( Math.round( Math.max( 0, value ) ) ).replace( /\B(?=(\d{3})+(?!\d))/g, '.' );
+	}
+
 	function pluralExt( count ) {
 		return count === 1 ? '1 uitbreidingsset' : count + ' uitbreidingssets';
 	}
@@ -74,7 +79,7 @@
 	function compute( color, persons, cfg ) {
 		var items = color.items;
 		var n = Math.max( 1, Math.min( cfg.max, persons ) );
-		var set, ext, i;
+		var set, set2 = 0, ext, i;
 
 		if ( n <= 8 ) {
 			set = 8;
@@ -90,28 +95,36 @@
 			ext = n - 8;
 		}
 
+		// 12 persons: a second 4-person set instead of four single stations.
+		if ( n === 12 ) {
+			set2 = 4;
+			ext = 0;
+		}
+
 		var solo = n === 1;
 		if ( solo ) {
 			set = 0;
 			ext = 1;
 		}
 
-		var spare = set + ext - n;
-		var total = cfg.showPrices ? ( solo ? 0 : items[ set ].price ) + ext * items.ext.price : 0;
-		var totalWas = cfg.showPrices ? ( solo ? 0 : items[ set ].regular ) + ext * items.ext.regular : 0;
-		var stations = set + ext;
+		var spare = set + set2 + ext - n;
+		var total = cfg.showPrices ? ( solo ? 0 : items[ set ].price ) + ( set2 ? items[ set2 ].price : 0 ) + ext * items.ext.price : 0;
+		var totalWas = cfg.showPrices ? ( solo ? 0 : items[ set ].regular ) + ( set2 ? items[ set2 ].regular : 0 ) + ext * items.ext.regular : 0;
+		var stations = set + set2 + ext;
 		var title, text;
 
 		if ( solo ) {
 			title = color.name + ' uitbreidingsset';
 			text = 'Eén kookstation van 250 W met eigen keramisch bord en bakplaat. Later uit te breiden tot een complete set.';
 		} else {
-			title = ext ? set + ' personen + ' + pluralExt( ext ) : color.name + ' voor ' + set + ' personen';
+			title = set2 ? set + ' personen + ' + set2 + ' personen' : ( ext ? set + ' personen + ' + pluralExt( ext ) : color.name + ' voor ' + set + ' personen' );
 			text = stations + ' kookstations van 250 W, samen ' + formatWatt( stations * WATT ) + '.';
 			if ( spare > 0 ) {
 				text += ' Je houdt ' + ( spare === 1 ? 'één plek' : spare + ' plekken' ) + ' over voor een extra gast.';
 			}
-			if ( ext ) {
+			if ( set2 ) {
+				text += ' Twee complete sets: één voor ' + set + ' en één voor ' + set2 + ' personen.';
+			} else if ( ext ) {
 				text += ' Elke uitbreidingsset voegt één eigen kookstation met bord en bakplaat toe.';
 			}
 		}
@@ -128,6 +141,9 @@
 		for ( i = 0; i < set; i++ ) {
 			dots.push( i < n ? 'guest' : 'spare' );
 		}
+		for ( i = 0; i < set2; i++ ) {
+			dots.push( 'guest' );
+		}
 		for ( i = 0; i < ext; i++ ) {
 			dots.push( 'ext' );
 		}
@@ -137,13 +153,13 @@
 			var item = items[ key ];
 			var diff = cfg.showPrices ? item.regular - item.price : 0;
 			cols[ key ] = {
-				active: key === 'ext' ? ext > 0 : Number( key ) === set,
+				active: key === 'ext' ? ext > 0 : ( Number( key ) === set || Number( key ) === set2 ),
 				sale: cfg.showPrices && cfg.showSale && item.price < item.regular - 0.004,
 				price: cfg.showPrices ? formatEur( item.price ) : '',
 				was: cfg.showPrices ? formatEur( item.regular ) : '',
 				badge: ! cfg.showPrices ? '' : ( cfg.discountPct
 					? '-' + Math.round( diff / item.regular * 100 ) + '%'
-					: '-€' + Math.round( diff ) ),
+					: '-' + formatDiscountEur( diff ) ),
 				url: item.url
 			};
 		} );
@@ -156,12 +172,12 @@
 			dots: dots,
 			hasExt: ext > 0,
 			hasSpare: spare > 0,
-			extLink: ext > 0 && ! solo,
-			extLabel: 'Voeg ' + pluralExt( ext ) + ' toe →',
-			extUrl: items.ext.url,
+			extLink: ( ext > 0 || set2 > 0 ) && ! solo,
+			extLabel: set2 ? 'Voeg de set voor ' + set2 + ' personen toe →' : 'Voeg ' + pluralExt( ext ) + ' toe →',
+			extUrl: set2 ? items[ set2 ].url : items.ext.url,
 			total: cfg.showPrices ? formatEur( total ) : '',
 			totalWas: cfg.showPrices ? formatEur( totalWas ) : '',
-			save: cfg.showPrices ? 'Je bespaart ' + formatEur( totalWas - total ) : '',
+			save: cfg.showPrices ? 'Je bespaart ' + formatDiscountEur( totalWas - total ) : '',
 			onSale: cfg.showPrices && cfg.showSale && total < totalWas - 0.004,
 			ctaUrl: solo ? items.ext.url : items[ set ].url,
 			image: solo ? 'ext' : String( set ),
