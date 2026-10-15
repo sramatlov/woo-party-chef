@@ -17,11 +17,6 @@ an optional color: missing Deluxe products (production today) do not shorten the
 12-hour ID cache. The color picker is now a wrapping flex row so three finishes
 fit on one line on desktop; two finishes look identical to v1.3.0.
 
-Each catalogue color has an `intro`: a short version explanation shown first in
-"Ons advies". It is only rendered when Deluxe is offered, so the Wit/Grey-only
-planner stays exactly as in v1.3.0. The advice body has no fixed height, so the
-longer Deluxe text grows the box instead of being clipped.
-
 ## v1.3.0 (6 October 2026)
 
 ### Decision: CSS-only automatic sizing with a per-shortcode rollback

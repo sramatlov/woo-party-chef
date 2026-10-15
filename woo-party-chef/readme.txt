@@ -81,7 +81,6 @@ discovered from normal page content and Elementor data on the first visit.
 * Add the Chef's Dinner Party Deluxe line (480 W per station, two pannetjes per station) behind [woo_party_chef deluxe="yes"].
 * With Deluxe enabled it is the first finish and selected by default; an explicit default_color still wins.
 * Power, advice copy and the "In elke ..." feature box follow the selected line.
-* With Deluxe offered, "Ons advies" opens with a short explanation of the selected version (Deluxe, Wit or Glazed Grey).
 * Without deluxe="yes" the planner is unchanged; missing Deluxe products never shorten the product cache.
 
 = 1.3.0 =

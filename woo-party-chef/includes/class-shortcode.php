@@ -218,10 +218,6 @@ class WOOPC_Shortcode {
 		$deluxe = self::is_yes( $atts['deluxe'] );
 		if ( ! $deluxe ) {
 			$colors = array_diff_key( $colors, array_flip( WOOPC_Products::OPTIONAL_COLORS ) );
-			// Version explanations only matter when there is a Deluxe to compare with.
-			foreach ( $colors as $key => $color ) {
-				$colors[ $key ]['intro'] = '';
-			}
 		}
 		// Fixed button order; the first available color is the fallback default.
 		$colors = array_replace( array_intersect_key( array_flip( self::COLOR_ORDER ), $colors ), $colors );
@@ -270,7 +266,6 @@ class WOOPC_Shortcode {
 						'line'  => $color['line'],
 						'watt'  => $color['watt'],
 						'kit'   => $color['kit'],
-						'intro' => $color['intro'],
 						'items' => $items,
 					);
 				},
@@ -356,7 +351,6 @@ class WOOPC_Shortcode {
 						<div class="woopc__advice-label">Ons advies</div>
 						<div class="woopc__advice-title" data-ref="title"><?php echo esc_html( $state['title'] ); ?></div>
 						<div class="woopc__advice-body">
-							<span class="woopc__intro" data-ref="intro"<?php echo '' === $state['intro'] ? ' hidden' : ''; ?>><?php echo esc_html( $state['intro'] ); ?></span>
 							<span data-ref="text"><?php echo esc_html( $state['text'] ); ?></span>
 							<span class="woopc__alt" data-ref="alt"<?php echo '' === $state['alt'] ? ' hidden' : ''; ?>><?php echo esc_html( $state['alt'] ); ?></span>
 							<a class="woopc__ext-link" data-ref="ext-link" href="<?php echo esc_url( $state['ext_url'] ); ?>"<?php echo $state['ext_link'] ? '' : ' hidden'; ?>><?php echo esc_html( $state['ext_label'] ); ?></a>

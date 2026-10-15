@@ -418,10 +418,6 @@
 	text-wrap: pretty;
 }
 
-.woopc .woopc__intro {
-	color: var(--woopc-title);
-}
-
 .woopc .woopc__alt {
 	font-size: 15px;
 	color: var(--woopc-muted);

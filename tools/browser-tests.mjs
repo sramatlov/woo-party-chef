@@ -165,37 +165,12 @@ try {
     const visibleFeatures = () => dx.locator('.woopc__features:not([hidden]) .woopc__features-title').textContent();
     await check(await dx.getAttribute('data-color') === 'deluxe' && await visibleFeatures() === 'In elke Chef’s Dinner Party Deluxe', `Deluxe must be selected with its own feature box at ${width}px.`);
     await check((await dx.locator('[data-ref="text"]').textContent()).startsWith('4 kookstations van 480 W'), `Deluxe advice must use 480 W at ${width}px.`);
-    await check((await dx.locator('[data-ref="intro"]').textContent()).startsWith('Grillen én gourmetten tegelijk') && await dx.locator('[data-ref="intro"]').isVisible(), `Deluxe advice must explain the version at ${width}px.`);
     await dx.locator('[data-pick-color="wit"]').first().click();
     await check(await visibleFeatures() === 'In elke Chef’s Dinner Party' && await dx.locator('.woopc__features:not([hidden])').count() === 1, `Switching to Wit must show the standard feature box at ${width}px.`);
-    await check((await dx.locator('[data-ref="intro"]').textContent()).startsWith('De klassieke Chef’s Dinner Party in fris wit'), `Switching to Wit must explain the classic version at ${width}px.`);
     await check(await dx.locator('[data-col="8"] [data-ref="watt"]').textContent() === '2.000 W' && await dx.locator('[data-col="ext"] [data-ref="meta"]').textContent() === '1 station · 250 W', `Comparison power must follow Wit at ${width}px.`);
     await dx.locator('[data-pick-color="deluxe"]').first().click();
     await check(await dx.locator('[data-col="8"] [data-ref="watt"]').textContent() === '3.840 W' && await visibleFeatures() === 'In elke Chef’s Dinner Party Deluxe', `Switching back must restore Deluxe at ${width}px.`);
     await check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Deluxe must not overflow at ${width}px.`);
-  }
-
-  // The longer Deluxe explanation must stay readable in every planner size.
-  for (const [width, height] of [[1280, 640], [1024, 768], [1440, 900], [375, 667], [320, 640]]) {
-    await render(fixtures.html.deluxe, width, '100%', height);
-    for (const color of ['deluxe', 'wit', 'grey']) {
-      await page.locator('[data-pick-color="' + color + '"]').first().click();
-      for (const persons of [1, 4, 7, 12]) {
-        const dxRoot = page.locator('.woopc');
-        const current = Number(await dxRoot.getAttribute('data-persons'));
-        const name = current > persons ? 'Minder personen' : 'Meer personen';
-        for (let i = 0; i < Math.abs(current - persons); i++) await dxRoot.getByRole('button', { name, exact: true }).click();
-        const fits = await dxRoot.locator('.woopc__advice').evaluate(el => {
-          const outer = el.getBoundingClientRect();
-          return [...el.querySelectorAll('[data-ref="title"],[data-ref="intro"],[data-ref="text"],[data-ref="alt"],[data-ref="ext-link"],[data-ref="total"],[data-ref="cta"]')].filter(node => !node.hidden).every(node => {
-            const rect = node.getBoundingClientRect();
-            return rect.left >= outer.left && rect.right <= outer.right + 1 && rect.bottom <= outer.bottom + 1 && node.scrollWidth <= node.clientWidth + 1;
-          });
-        });
-        await check(fits, `Deluxe-enabled advice must remain unclipped for ${color}, ${persons} persons at ${width}x${height}.`);
-      }
-    }
-    await check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Deluxe-enabled planner must not overflow at ${width}x${height}.`);
   }
 
   await render(fixtures.html.hidden, 375);
