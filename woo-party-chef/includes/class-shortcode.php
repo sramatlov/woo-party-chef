@@ -218,6 +218,12 @@ class WOOPC_Shortcode {
 		$deluxe = self::is_yes( $atts['deluxe'] );
 		if ( ! $deluxe ) {
 			$colors = array_diff_key( $colors, array_flip( WOOPC_Products::OPTIONAL_COLORS ) );
+			// The short-description list under the photo is part of the Deluxe opt-in.
+			foreach ( $colors as $key => $color ) {
+				foreach ( $color['items'] as $item_key => $item ) {
+					unset( $colors[ $key ]['items'][ $item_key ]['points'] );
+				}
+			}
 		}
 		// Fixed button order; the first available color is the fallback default.
 		$colors = array_replace( array_intersect_key( array_flip( self::COLOR_ORDER ), $colors ), $colors );
@@ -258,7 +264,7 @@ class WOOPC_Shortcode {
 				static function ( array $color ) use ( $settings ): array {
 					$items = array();
 					foreach ( $color['items'] as $key => $item ) {
-						$items[ $key ] = array_intersect_key( $item, array_flip( $settings['show_prices'] ? array( 'price', 'regular', 'url', 'image', 'pfas' ) : array( 'url', 'image', 'pfas' ) ) );
+						$items[ $key ] = array_intersect_key( $item, array_flip( $settings['show_prices'] ? array( 'price', 'regular', 'url', 'image', 'pfas', 'points' ) : array( 'url', 'image', 'pfas', 'points' ) ) );
 					}
 					return array(
 						'label' => $color['label'],
@@ -310,10 +316,19 @@ class WOOPC_Shortcode {
 	 */
 	private static function render_planner( array $colors, string $color_key, array $state, array $settings, string $instance_id ): void {
 		$shown = $colors[ $color_key ]['items'][ $state['image'] ];
+		// Only Deluxe-enabled shortcodes carry points; otherwise the media is unchanged.
+		$with_points = array_key_exists( 'points', $shown );
 		?>
 		<div class="woopc__planner">
-			<div class="woopc__media">
+			<div class="woopc__media"<?php echo $with_points ? ' data-points="' . ( $state['points'] ? 'true' : 'false' ) . '"' : ''; ?>>
 				<?php self::render_product_images( $colors, (int) $shown['image'], $settings['image_loading'] ); ?>
+				<?php if ( $with_points ) : ?>
+					<ul class="woopc__points" data-ref="points"<?php echo $state['points'] ? '' : ' hidden'; ?>>
+						<?php foreach ( $state['points'] as $point ) : ?>
+							<li class="woopc__point"><?php echo esc_html( $point ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
 				<span class="woopc__pfas" data-ref="pfas"<?php echo $shown['pfas'] ? '' : ' hidden'; ?>>
 					<svg class="woopc__pfas-icon" viewBox="0 0 2.996769 3.3520503" aria-hidden="true" focusable="false"><path fill="currentColor" d="<?php echo esc_attr( self::LEAF_PATH ); ?>"/></svg>PFAS-vrij
 				</span>

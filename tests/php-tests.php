@@ -22,6 +22,10 @@ foreach ( $catalogue as $color => $config ) {
 	foreach ( $config['products'] as $key => $ref ) {
 		$product = new WC_Product( ++$id );
 		$product->sku = $ref['sku']; $product->slug = $ref['slug'];
+		// Real short descriptions are <ul> lists, sometimes with links; Deluxe 6 has no list.
+		$product->short = 'deluxe' === $color && '6' === (string) $key
+			? '<p>Geen opsomming</p>'
+			: "<ul>\n<li>Punt {$color} {$key} &amp; meer</li>\n<li><a href=\"https://example.test/x\">Uitbreidbaar  met\n stations</a></li>\n</ul>";
 		$product->price = 'ext' === $key ? 39.95 : 79.95 + (int) $key * 20;
 		$product->regular = $product->price + ( 'ext' === $key ? 5.50 : 20 );
 		$GLOBALS['test_products'][$id] = $product;
@@ -81,6 +85,18 @@ check( false !== strpos( $with_deluxe, 'data-color="deluxe"' ) && false !== strp
 check( false !== strpos( $deluxe_wit, 'data-color="wit"' ), 'An explicit default_color still wins over the Deluxe default.' );
 check( false !== strpos( $with_deluxe, '<div class="woopc__features" data-line="deluxe">' ) && false !== strpos( $with_deluxe, '<div class="woopc__features" data-line="standard" hidden>' ), 'The Deluxe feature box is visible and the standard box hidden while Deluxe is selected.' );
 check( false !== strpos( $with_deluxe, 'In elke Chef’s Dinner Party Deluxe' ) && false !== strpos( $with_deluxe, 'Draaibare serveerschaal' ), 'Deluxe has its own feature copy.' );
+check( false === strpos( $first, 'woopc__points' ) && false === strpos( $first, 'data-points' ) && false === strpos( $first, 'Punt ' ), 'Without Deluxe the photo has no short-description list.' );
+foreach ( config_from_html( $first )['colors'] as $color ) {
+	foreach ( $color['items'] as $item ) { check( ! array_key_exists( 'points', $item ), 'Without Deluxe no short descriptions reach the browser.' ); }
+}
+check( false !== strpos( $with_deluxe, '<div class="woopc__media" data-points="true">' ), 'With Deluxe the photo makes room for the list.' );
+check( 1 === preg_match( '#<ul class="woopc__points" data-ref="points">\s*<li class="woopc__point">Punt deluxe 4 &amp; meer</li>\s*<li class="woopc__point">Uitbreidbaar met stations</li>\s*</ul>#', $with_deluxe ), 'The list shows the recommended product\'s short-description bullets as escaped plain text without links.' );
+check( false !== strpos( $deluxe_wit, '<li class="woopc__point">Punt wit 4 &amp; meer</li>' ), 'Standard finishes show their own product bullets when Deluxe is offered.' );
+check( array( 'Punt deluxe ext & meer', 'Uitbreidbaar met stations' ) === WOOPC_Products::compute_state( $colors['deluxe'], 1, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) )['points'], 'One person shows the extension set bullets.' );
+check( array( 'Punt deluxe 8 & meer', 'Uitbreidbaar met stations' ) === WOOPC_Products::compute_state( $colors['deluxe'], 10, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) )['points'], '9-12 persons show the 8-person set bullets.' );
+check( array() === WOOPC_Products::compute_state( $colors['deluxe'], 6, array( 'show_prices' => true, 'show_sale' => true, 'discount_pct' => false ) )['points'], 'A short description without a list shows no bullets.' );
+$no_list = WOOPC_Shortcode::render( array( 'deluxe' => 'yes', 'persons' => '6' ) );
+check( false !== strpos( $no_list, '<div class="woopc__media" data-points="false">' ) && false !== strpos( $no_list, '<ul class="woopc__points" data-ref="points" hidden>' ), 'Without bullets the photo keeps its full size and the list is hidden.' );
 check( false !== strpos( $with_deluxe, 'data-ref="watt">3.840 W<' ) && false !== strpos( $deluxe_wit, 'data-ref="watt">2.000 W<' ), 'Comparison power follows the selected line.' );
 check( false !== strpos( $first, 'data-layout="auto"' ), 'Existing shortcodes must enable automatic planner sizing by default.' );
 check( false !== strpos( $classic, 'data-layout="classic"' ), 'The classic shortcode setting must expose a direct layout rollback.' );

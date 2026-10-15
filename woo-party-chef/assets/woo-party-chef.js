@@ -54,7 +54,9 @@
 				COLS.every( function ( col ) {
 					var item = color.items[ col ];
 					return isObject( item ) && validUrl( item.url ) && Number.isSafeInteger( item.image ) && item.image >= 0 &&
-						typeof item.pfas === 'boolean' && ( ! cfg.showPrices ||
+						typeof item.pfas === 'boolean' &&
+						( item.points === undefined || ( Array.isArray( item.points ) && item.points.every( function ( point ) { return typeof point === 'string'; } ) ) ) &&
+						( ! cfg.showPrices ||
 							( typeof item.price === 'number' && Number.isFinite( item.price ) && item.price > 0 &&
 								typeof item.regular === 'number' && Number.isFinite( item.regular ) && item.regular >= item.price &&
 								Number.isFinite( item.regular * cfg.max ) ) );
@@ -113,6 +115,7 @@
 		}
 
 		var spare = set + set2 + ext - n;
+		var shown = solo ? 'ext' : String( set );
 		var total = cfg.showPrices ? ( solo ? 0 : items[ set ].price ) + ( set2 ? items[ set2 ].price : 0 ) + ext * items.ext.price : 0;
 		var totalWas = cfg.showPrices ? ( solo ? 0 : items[ set ].regular ) + ( set2 ? items[ set2 ].regular : 0 ) + ext * items.ext.regular : 0;
 		var stations = set + set2 + ext;
@@ -187,7 +190,8 @@
 			save: cfg.showPrices ? 'Je bespaart ' + formatDiscountEur( totalWas - total ) : '',
 			onSale: cfg.showPrices && cfg.showSale && total < totalWas - 0.004,
 			ctaUrl: solo ? items.ext.url : items[ set ].url,
-			image: solo ? 'ext' : String( set ),
+			image: shown,
+			points: ( items[ shown ].points || [] ).slice(),
 			cols: cols
 		};
 	}
@@ -255,6 +259,23 @@
 				img.hidden = img.getAttribute( 'data-image-id' ) !== String( shown.image );
 			} );
 			show( ref( 'pfas' ), !! shown.pfas );
+
+			// Short-description bullets of the recommended product (Deluxe opt-in only).
+			var points = ref( 'points' );
+			if ( points ) {
+				if ( points.getAttribute( 'data-points-key' ) !== JSON.stringify( s.points ) ) {
+					points.textContent = '';
+					s.points.forEach( function ( text ) {
+						var li = document.createElement( 'li' );
+						li.className = 'woopc__point';
+						li.textContent = text;
+						points.appendChild( li );
+					} );
+					points.setAttribute( 'data-points-key', JSON.stringify( s.points ) );
+				}
+				show( points, s.points.length > 0 );
+				points.parentNode.setAttribute( 'data-points', s.points.length > 0 ? 'true' : 'false' );
+			}
 			setText( ref( 'color-label' ), '· ' + color.label );
 
 			// Feature box of the active product line (standard or Deluxe).

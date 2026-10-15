@@ -27,6 +27,7 @@ class WC_Product {
 	public $regular = 119.95;
 	public $sku = '';
 	public $slug = '';
+	public $short = '';
 	public function __construct( int $id ) { $this->id = $id; }
 	public function get_id(): int { return $this->id; }
 	public function get_status(): string { return $this->status; }
@@ -34,6 +35,7 @@ class WC_Product {
 	public function get_image_id(): int { return $this->id; }
 	public function get_sku(): string { return $this->sku; }
 	public function get_slug(): string { return $this->slug; }
+	public function get_short_description(): string { return $this->short; }
 	public function is_in_stock(): bool { return false; }
 	public function is_purchasable(): bool { return false; }
 }
@@ -95,6 +97,7 @@ function absint( $v ) { return abs( (int) $v ); }
 function sanitize_key( $v ) { return preg_replace( '/[^a-z0-9_-]/', '', strtolower( $v ) ); }
 function sanitize_html_class( $v ) { return preg_replace( '/[^a-zA-Z0-9_-]/', '', $v ); }
 function sanitize_title( $v ) { return trim( preg_replace( '/[^a-z0-9_-]/', '-', strtolower( $v ) ), '-' ); }
+function wp_strip_all_tags( $v ) { return trim( strip_tags( (string) $v ) ); }
 function sanitize_text_field( $v ) { return trim( strip_tags( $v ) ); }
 function sanitize_hex_color( $v ) { return preg_match( '/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i', $v ) ? $v : null; }
 function esc_attr( $v ) { return htmlspecialchars( (string) $v, ENT_QUOTES, 'UTF-8' ); }

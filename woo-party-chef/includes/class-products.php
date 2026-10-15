@@ -344,7 +344,7 @@ class WOOPC_Products {
 	 * itself shows on the product page.
 	 *
 	 * @param \WC_Product $product Product.
-	 * @return array{price: float, regular: float, url: string, image: int, pfas: bool}|null
+	 * @return array{price: float, regular: float, url: string, image: int, pfas: bool, points: string[]}|null
 	 */
 	private static function get_item_data( \WC_Product $product ): ?array {
 		if ( 'publish' !== $product->get_status() ) {
@@ -377,7 +377,34 @@ class WOOPC_Products {
 			'image'   => (int) $product->get_image_id(),
 			// Same ACF true/false field as Woo Card Chef's PFAS-vrij badge.
 			'pfas'    => '1' === (string) get_post_meta( $product->get_id(), 'badge_pfas_vrij', true ),
+			'points'  => self::short_points( $product ),
 		);
+	}
+
+	/**
+	 * The bullet list from the product's short description, as plain text.
+	 *
+	 * Read live, like prices: editing the short description in WooCommerce
+	 * changes the planner. Links and markup are dropped; no list means none.
+	 *
+	 * @param \WC_Product $product Product.
+	 * @return string[]
+	 */
+	private static function short_points( \WC_Product $product ): array {
+		if ( ! preg_match_all( '#<li\b[^>]*>(.*?)</li>#is', (string) $product->get_short_description(), $matches ) ) {
+			return array();
+		}
+		$points = array();
+		foreach ( $matches[1] as $item ) {
+			$text = trim( (string) preg_replace( '/\s+/u', ' ', html_entity_decode( wp_strip_all_tags( $item ), ENT_QUOTES, 'UTF-8' ) ) );
+			if ( '' !== $text ) {
+				$points[] = $text;
+			}
+			if ( count( $points ) >= 6 ) {
+				break;
+			}
+		}
+		return $points;
 	}
 
 	/**
@@ -425,6 +452,7 @@ class WOOPC_Products {
 		}
 
 		$spare     = $set + $set2 + $ext - $n;
+		$shown     = $solo ? 'ext' : (string) $set;
 		$total     = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['price'] ) + ( $set2 ? $items[ (string) $set2 ]['price'] : 0.0 ) + $ext * $items['ext']['price'] : 0.0;
 		$total_was = $show_price ? ( $solo ? 0.0 : $items[ (string) $set ]['regular'] ) + ( $set2 ? $items[ (string) $set2 ]['regular'] : 0.0 ) + $ext * $items['ext']['regular'] : 0.0;
 		$on_sale   = $show_price && $show_sale && $total < $total_was - 0.004;
@@ -501,7 +529,9 @@ class WOOPC_Products {
 			'on_sale'   => $on_sale,
 			'cta_url'   => $solo ? $items['ext']['url'] : $items[ (string) $set ]['url'],
 			// Product shown in the planner: the main purchase (8-set for 9-12 persons).
-			'image'     => $solo ? 'ext' : (string) $set,
+			'image'     => $shown,
+			// Its short-description bullets under the photo (only when Deluxe is offered).
+			'points'    => (array) ( $items[ $shown ]['points'] ?? array() ),
 			'cols'      => $cols,
 		);
 	}

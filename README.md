@@ -70,7 +70,11 @@ appears on shortcodes that ask for it:
 
 Deluxe is then the first finish button and selected by default (an explicit
 `default_color` still wins). Power figures, advice copy and the feature box
-("In elke Chef's Dinner Party Deluxe") follow the selected finish. Without the
+("In elke Chef's Dinner Party Deluxe") follow the selected finish. The planner
+photo becomes about 25% smaller on desktop (unchanged on phones) and shows the
+bullet list from the recommended product's short description, read live from
+WooCommerce; links become plain text and products without a list show the photo
+at full size. Without the
 attribute the planner is exactly the v1.3.0 Wit/Glazed Grey planner, so a
 hidden test page can run with Deluxe while the campaign page stays unchanged.
 To switch the campaign page, add `deluxe="yes"` to its shortcode, save and use
